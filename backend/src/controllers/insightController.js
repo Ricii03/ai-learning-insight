@@ -1,25 +1,140 @@
 const LearningActivity = require('../models/LearningActivity');
 const Insight = require('../models/Insight');
+const User = require('../models/User');
 const { generateInsights } = require('../services/mlService');
 
 const getCurrentInsights = async (req, res, next) => {
   try {
-    const { userId } = req.params;
+    // Normalize userId: remove .0 if exists (e.g., '5181638.0' -> '5181638')
+    let userId = String(req.params.userId).trim();
+    if (userId.endsWith('.0')) {
+      userId = userId.slice(0, -2);
+    }
+    
+    console.log('[insightController] getCurrentInsights called for userId:', req.params.userId);
+    console.log('[insightController] Normalized userId:', userId);
+    console.log('[insightController] userId type:', typeof userId);
 
-    const activities = await LearningActivity.find({ userId })
+    // Cari insight terbaru dari collection Insight (coba dengan normalized userId)
+    let latestInsight = await Insight.findOne({ userId })
+      .sort({ createdAt: -1 });
+    
+    // Jika tidak ditemukan dengan normalized, coba dengan original format
+    if (!latestInsight && req.params.userId !== userId) {
+      console.log('[insightController] Trying with original userId format:', req.params.userId);
+      latestInsight = await Insight.findOne({ userId: req.params.userId })
+        .sort({ createdAt: -1 });
+    }
+
+    console.log('[insightController] Latest insight found:', latestInsight ? 'Yes' : 'No');
+
+    // Get user data from User collection (dataset)
+    const user = await User.findOne({ userId });
+    console.log('[insightController] User found:', user ? 'Yes' : 'No');
+    if (user) {
+      console.log('[insightController] User consistencyScore from dataset:', user.consistencyScore);
+    }
+
+    // Check if user has activities
+    let activities = await LearningActivity.find({ userId })
       .sort({ date: -1 })
       .limit(50);
+    
+    // Jika tidak ditemukan dengan normalized, coba dengan original format
+    if (activities.length === 0 && req.params.userId !== userId) {
+      console.log('[insightController] Trying activities with original userId format:', req.params.userId);
+      activities = await LearningActivity.find({ userId: req.params.userId })
+        .sort({ date: -1 })
+        .limit(50);
+    }
 
-    if (activities.length === 0) {
+    console.log('[insightController] Activities found:', activities.length);
+
+    if (latestInsight) {
+      // Prioritaskan data dari User dataset jika:
+      // 1. Tidak ada activities, ATAU
+      // 2. User punya consistencyScore di dataset yang lebih tinggi dari Insight
+      const shouldUseDataset = (activities.length === 0 || 
+        (user && user.consistencyScore !== undefined && 
+         user.consistencyScore > latestInsight.consistencyScore));
+      
+      if (shouldUseDataset && user && user.consistencyScore !== undefined && user.consistencyScore > 0) {
+        console.log('[insightController] Using User dataset data instead of Insight');
+        console.log('[insightController] Dataset consistencyScore:', user.consistencyScore);
+        console.log('[insightController] Insight consistencyScore:', latestInsight.consistencyScore);
+        const insightWithUserData = {
+          ...latestInsight.toObject(),
+          consistencyScore: user.consistencyScore,
+          mostActiveTime: user.mostActiveTime || latestInsight.mostActiveTime,
+          insights: user.engagementLevel 
+            ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+            : latestInsight.insights
+        };
+        return res.json({
+          success: true,
+          data: insightWithUserData
+        });
+      }
+      
+      // Jika ada activities dan dataset tidak lebih tinggi, return Insight yang sudah ada (dari activities)
+      console.log('[insightController] Returning existing insight from activities');
       return res.json({
         success: true,
-        message: 'Belum ada aktivitas belajar',
-        data: null
+        data: latestInsight
       });
     }
 
-    const result = await generateInsights(activities);
+    // Activities sudah di-check di atas
 
+    let result;
+    if (activities.length === 0) {
+      // Jika tidak ada activities, gunakan data dari User dataset jika ada
+      console.log('[insightController] No activities, using User dataset data if available');
+      if (user && user.consistencyScore !== undefined) {
+        result = {
+          mostActiveTime: user.mostActiveTime || 'morning',
+          consistencyScore: user.consistencyScore,
+          daysActive: 0,
+          learningPattern: 'Reflective Learner',
+          totalDuration: 0,
+          totalActivities: 0,
+          completionRate: 0,
+          avgScore: 0,
+          insights: user.engagementLevel 
+            ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+            : 'Belum ada data aktivitas belajar. Mulai belajar untuk melihat insights-mu!'
+        };
+        console.log('[insightController] Using User dataset data:', {
+          consistencyScore: result.consistencyScore,
+          mostActiveTime: result.mostActiveTime
+        });
+      } else {
+        // Jika tidak ada user data, return default
+        result = {
+          mostActiveTime: 'morning',
+          consistencyScore: 0,
+          daysActive: 0,
+          learningPattern: 'Reflective Learner',
+          totalDuration: 0,
+          totalActivities: 0,
+          completionRate: 0,
+          avgScore: 0,
+          insights: 'Belum ada data aktivitas belajar. Mulai belajar untuk melihat insights-mu!'
+        };
+      }
+    } else {
+      // Generate insights dari activities
+      console.log('[insightController] Generating insights from activities');
+      result = await generateInsights(activities);
+      console.log('[insightController] Insights generated:', {
+        mostActiveTime: result.mostActiveTime,
+        consistencyScore: result.consistencyScore,
+        learningPattern: result.learningPattern
+      });
+    }
+
+    // Simpan insight ke database (termasuk default)
+    console.log('[insightController] Creating insight in database');
     const insight = await Insight.create({
       userId,
       weekStart: new Date(),
@@ -27,12 +142,15 @@ const getCurrentInsights = async (req, res, next) => {
       ...result
     });
 
+    console.log('[insightController] Insight created successfully, ID:', insight._id);
+
     res.json({
       success: true,
       data: insight
     });
 
   } catch (error) {
+    console.error('[insightController] Error in getCurrentInsights:', error);
     next(error);
   }
 };

@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRightIcon, ClockIcon } from "lucide-react"; 
+import { ArrowRightIcon, ClockIcon } from "lucide-react";
+import { useAuth } from '../../contexts/AuthContext';
+import { insightsAPI } from '../../services/api'; 
 
 const decorativeQuoteLogos = [
     { top: "top-[0%]", left: "left-[0%]", rotation: "" }, 
@@ -56,10 +58,35 @@ const Button = ({ className = "", children, onClick, variant = 'primary' }) => {
 // AI LEARNING INSIGHT PAGE
 
 // 1. ConsistencyScoreSection 
+// Component ini menerima data dari backend melalui props
+// Data diambil dari backend API: GET /api/insights/:userId
+// Data flow:
+//   1. Frame component fetch dari backend: insightsAPI.getCurrentInsights(userId)
+//   2. Transform data: transformInsightsData(insightsData, user)
+//   3. Pass ke component: finalUserData.consistency_score (dari backend)
+// Props:
+//   - score: consistencyScore dari backend insights API (insightsData.consistencyScore)
+//   - insight: description dari backend insights API (calculated based on score)
+//   - insightText: insights text dari backend insights API (insightsData.insights)
 const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!' }) => {
-    const chartColor = '#283e75'; 
-    const backgroundColor = '#e0e0e0'; 
-    const angle = score * 3.6; 
+    // score berasal dari backend: insightsData.consistencyScore
+    // Pastikan score adalah number dan dalam range 0-100
+    const numericScore = typeof score === 'number' ? score : parseFloat(score || 0);
+    const normalizedScore = Math.max(0, Math.min(100, numericScore)); // Clamp antara 0-100
+    
+    // Format score untuk display (1 desimal)
+    const displayScore = normalizedScore.toFixed(1);
+    
+    // angle dihitung dari score: score * 3.6 (untuk circular progress)
+    // 100% = 360 derajat, jadi 1% = 3.6 derajat
+    const chartColor = '#283e75'; 
+    const backgroundColor = '#e0e0e0'; 
+    const angle = normalizedScore * 3.6;
+    
+    console.log('[ConsistencyScoreSection] Received score from backend:', score);
+    console.log('[ConsistencyScoreSection] Normalized score:', normalizedScore);
+    console.log('[ConsistencyScoreSection] Display score:', displayScore);
+    console.log('[ConsistencyScoreSection] Calculated angle:', angle); 
     
     return (
         <section className="w-full py-4 lg:py-8">
@@ -91,12 +118,12 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
                                 >
                                 </div>
                                 
-                                <div className="absolute inset-0 m-auto w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#fff6f6] flex items-center justify-center shadow-inner"> 
-                                    <span className="font-bold text-3xl lg:text-4xl text-[#0d1c31]"> 
-                                        {score}
-                                        <small className="text-lg">%</small> 
-                                    </span>
-                                </div>
+                        <div className="absolute inset-0 m-auto w-24 h-24 lg:w-32 lg:h-32 rounded-full bg-[#fff6f6] flex items-center justify-center shadow-inner"> 
+                            <span className="font-bold text-3xl lg:text-4xl text-[#0d1c31]"> 
+                                {displayScore}
+                                <small className="text-lg">%</small> 
+                            </span>
+                        </div>
                             </div>
                             <p className="font-['Open_Sans',Helvetica] font-normal text-xs lg:text-sm text-black/80 max-w-[200px] text-center italic"> 
                                 "{insightText}"
@@ -394,15 +421,288 @@ const getMainPattern = (data) => {
 };
 
 
+// Transform backend data to frontend format
+const transformInsightsData = (insightsData, user) => {
+    // If no insights data, return null (will show empty state)
+    if (!insightsData) {
+        return null;
+    }
+
+    // Map mostActiveTime to time distribution
+    const timeMap = {
+        'morning': { label: 'Morning (06:00-11:59)', index: 0 },
+        'afternoon': { label: 'Afternoon (12:00-17:59)', index: 1 },
+        'evening': { label: 'Evening (18:00-23:59)', index: 2 },
+        'night': { label: 'Night (00:00-05:59)', index: 3 }
+    };
+
+    // Use data from insights backend (not from user dataset)
+    const mostActiveTime = insightsData.mostActiveTime || 'morning';
+    // Check if consistencyScore exists and is a valid number
+    // Handle case where consistencyScore might be 0 (which is a valid value)
+    // If backend returns 0 and user has consistencyScore in dataset, use user's data as fallback
+    let consistencyScore = 0;
+    if (insightsData.consistencyScore !== undefined && insightsData.consistencyScore !== null) {
+        const parsedScore = Number(insightsData.consistencyScore);
+        if (!isNaN(parsedScore)) {
+            consistencyScore = parsedScore;
+        }
+    }
+    
+    // Fallback: If backend returns 0 and user has consistencyScore in dataset, use user's data
+    if (consistencyScore === 0 && user?.consistencyScore !== undefined && user.consistencyScore > 0) {
+        console.log('[transformInsightsData] Backend returned 0, using user dataset fallback:', user.consistencyScore);
+        consistencyScore = Number(user.consistencyScore);
+    }
+    
+    console.log('[transformInsightsData] Raw insightsData:', insightsData);
+    console.log('[transformInsightsData] consistencyScore from backend:', insightsData.consistencyScore);
+    console.log('[transformInsightsData] consistencyScore type:', typeof insightsData.consistencyScore);
+    console.log('[transformInsightsData] consistencyScore after transform:', consistencyScore);
+    
+    const timeInfo = timeMap[mostActiveTime] || timeMap['morning'];
+    
+    // Create time distribution data
+    const timeData = [
+        { label: 'Morning (06:00-11:59)', fillPercentage: 0, color: 'bg-amber-400' },
+        { label: 'Afternoon (12:00-17:59)', fillPercentage: 0, color: 'bg-blue-400' },
+        { label: 'Evening (18:00-23:59)', fillPercentage: 0, color: 'bg-indigo-700' },
+        { label: 'Night (00:00-05:59)', fillPercentage: 0, color: 'bg-indigo-700' }
+    ];
+    
+    // Set active time to 80%, distribute remaining to others
+    timeData[timeInfo.index].fillPercentage = 80;
+    const remaining = 20;
+    const otherCount = 3;
+    const otherPercentage = Math.floor(remaining / otherCount);
+    
+    timeData.forEach((time, index) => {
+        if (index !== timeInfo.index) {
+            time.fillPercentage = otherPercentage;
+        }
+    });
+
+    // If insights data exists, use it (timeData already created above)
+
+    // Map learning pattern
+    const patternMap = {
+        'Consistent Learner': { color: '#44dcd0', description: 'Kamu tipe belajar yang slow but steady! Konsisten dan teratur dalam belajar.' },
+        'Fast Learner': { color: '#0c9bab', description: 'Kamu cepat menyerap materi! Belajar dengan intensitas tinggi dalam waktu singkat.' },
+        'Reflective Learner': { color: '#0d1c31', description: 'Kamu suka merenung dan memahami secara mendalam sebelum melanjutkan.' }
+    };
+
+    const learningPattern = insightsData.learningPattern || 'Reflective Learner';
+    const patternInfo = patternMap[learningPattern] || patternMap['Reflective Learner'];
+
+    // Create learning pattern data (simplified - you might want to get actual percentages from backend)
+    const learningPatternData = [
+        { label: learningPattern, percentage: 60, color: patternInfo.color },
+        { label: learningPattern === 'Consistent Learner' ? 'Fast Learner' : 'Consistent Learner', percentage: 25, color: learningPattern === 'Consistent Learner' ? '#0c9bab' : '#44dcd0' },
+        { label: 'Reflective Learner', percentage: 15, color: '#0d1c31' }
+    ];
+
+    // Consistency description based on score
+    // Use consistencyScore yang sudah dihitung sebelumnya (line 417-419)
+    let consistencyDesc = 'Ayo tingkatkan konsistensi belajarmu!';
+    const score = consistencyScore; // Gunakan consistencyScore yang sudah dihitung
+    if (score >= 80) {
+        consistencyDesc = 'Konsistensi kamu kelas expert! Disiplin banget sampai belajar udah kayak bagian dari rutinitas harian kamu.';
+    } else if (score >= 60) {
+        consistencyDesc = 'Konsistensi kamu sudah baik! Pertahankan momentum ini dan coba tingkatkan lagi.';
+    } else if (score >= 40) {
+        consistencyDesc = 'Konsistensi kamu sedang berkembang. Coba buat jadwal belajar yang lebih teratur.';
+    } else {
+        consistencyDesc = 'Ayo tingkatkan konsistensi belajarmu! Mulai dengan belajar sedikit tapi rutin setiap hari.';
+    }
+
+    return {
+        display_name: user?.displayName ? 
+            user.displayName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') 
+            : 'Pengguna',
+        consistency_score: score,
+        insight_text: insightsData.insights || 'Belum ada insight tersedia.',
+        most_active_time: {
+            data: timeData,
+            description: `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}. Kamu memiliki tingkat aktivitas 80% di waktu ini. Manfaatkan waktu ini untuk materi yang paling menantang!`
+        },
+        learning_pattern: {
+            data: learningPatternData,
+            description: patternInfo.description
+        },
+        consistency: {
+            description: consistencyDesc
+        }
+    };
+};
+
 // FIXED FRAME COMPONENT (The Insight Page) 
 
 export function Frame({ onGoBack, userData = {} }) {
-    const imagePath = "https://placehold.co/100x100/1a3a5a/FFF1DF?text=G"; 
-    const G_Logo = imagePath;
-    
-    // Akses data dengan aman menggunakan optional chaining
-    const learningPatternData = userData.learning_pattern?.data || [];
-    const mainPattern = getMainPattern(learningPatternData);
+    const { user } = useAuth();
+    const [insightsData, setInsightsData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+
+    const imagePath = "https://placehold.co/100x100/1a3a5a/FFF1DF?text=G"; 
+    const G_Logo = imagePath;
+
+    // Fetch insights from backend
+    useEffect(() => {
+        const fetchInsights = async () => {
+            if (!user?.userId) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                setError(null);
+                
+                // Normalize userId: remove .0 if exists (e.g., '5181638.0' -> '5181638')
+                let normalizedUserId = String(user.userId).trim();
+                if (normalizedUserId.endsWith('.0')) {
+                    normalizedUserId = normalizedUserId.slice(0, -2);
+                }
+                
+                console.log('[Frame] Original userId:', user.userId);
+                console.log('[Frame] Normalized userId:', normalizedUserId);
+                console.log('[Frame] User object:', user);
+                
+                const response = await insightsAPI.getCurrentInsights(normalizedUserId);
+                
+                console.log('[Frame] API Response:', response);
+                console.log('[Frame] Response success:', response.success);
+                console.log('[Frame] Response data:', response.data);
+                
+                if (response.success) {
+                    // Jika ada data, gunakan data tersebut
+                    // Jika tidak ada data (null), tetap set null dan biarkan transformInsightsData handle default
+                    if (response.data) {
+                        console.log('[Frame] Setting insights data:', response.data);
+                        console.log('[Frame] Consistency Score in response:', response.data.consistencyScore);
+                        console.log('[Frame] Consistency Score type:', typeof response.data.consistencyScore);
+                        setInsightsData(response.data);
+                    } else {
+                        console.log('[Frame] No data in response, using null (will show default)');
+                        setInsightsData(null);
+                    }
+                } else {
+                    // Jika response tidak success, set null untuk trigger default data
+                    console.log('[Frame] Response not successful:', response.error || 'Unknown error');
+                    setInsightsData(null);
+                }
+            } catch (err) {
+                console.error('[Frame] Error fetching insights:', err);
+                console.error('[Frame] Error details:', err.response?.data || err.message);
+                // On error, set null untuk trigger default data instead of showing error
+                setInsightsData(null);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInsights();
+    }, [user?.userId]);
+
+    // Loading state
+    if (loading) {
+        return (
+            <div className="bg-[#FFF1DF] min-h-screen flex items-center justify-center">
+                <div className="text-center">
+                    <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a3a5a] mb-4"></div>
+                    <p className="text-gray-600">Memuat data insights...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Transform data dari backend insights
+    const transformedData = transformInsightsData(insightsData, user);
+    
+    // Jika tidak ada data dari backend, tampilkan empty state
+    if (!transformedData) {
+        return (
+            <div className="bg-[#FFF1DF] min-h-screen font-sans">
+                <div className="bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a] px-6 py-10 relative overflow-hidden">
+                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                        <button 
+                            onClick={onGoBack} 
+                            className="mb-6 flex items-center text-white/90 hover:text-white transition text-sm"
+                        >
+                            <svg 
+                                xmlns="http://www.w3.org/2000/svg" 
+                                className="h-5 w-5 mr-1" 
+                                fill="none" 
+                                viewBox="0 0 24 24" 
+                                stroke="currentColor" 
+                                strokeWidth={2}
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                            </svg>
+                            Kembali ke Dashboard
+                        </button>
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-6 py-8">
+                    <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
+                        <div className="max-w-md mx-auto">
+                            <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
+                                <svg 
+                                    className="w-12 h-12 text-gray-400" 
+                                    fill="none" 
+                                    stroke="currentColor" 
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path 
+                                        strokeLinecap="round" 
+                                        strokeLinejoin="round" 
+                                        strokeWidth={2} 
+                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
+                                    />
+                                </svg>
+                            </div>
+                            <h2 className="text-2xl font-bold text-[#0d1c31] mb-4">
+                                Belum Ada Data Insights
+                            </h2>
+                            <p className="text-gray-600 mb-6">
+                                Belum ada data aktivitas belajar untuk menampilkan insights. 
+                                Mulai belajar untuk melihat analisis kebiasaan belajarmu!
+                            </p>
+                            <button
+                                onClick={onGoBack}
+                                className="bg-[#1a3a5a] text-white px-6 py-3 rounded-lg hover:bg-[#254C75] transition font-semibold"
+                            >
+                                Kembali ke Dashboard
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+    
+    // Merge with userData prop if provided (for backward compatibility)
+    const finalUserData = {
+        ...transformedData,
+        ...userData,
+        // Override with transformed data from backend
+        display_name: transformedData.display_name,
+        consistency_score: transformedData.consistency_score,
+        insight_text: transformedData.insight_text,
+        most_active_time: transformedData.most_active_time,
+        learning_pattern: transformedData.learning_pattern,
+        consistency: transformedData.consistency
+    };
+    
+    console.log('[Frame] finalUserData.consistency_score:', finalUserData.consistency_score);
+    console.log('[Frame] finalUserData:', finalUserData);
+
+    // Akses data dengan aman menggunakan optional chaining
+    const learningPatternData = finalUserData.learning_pattern?.data || [];
+    const mainPattern = getMainPattern(learningPatternData);
+
+    // Note: Tidak perlu error state karena transformInsightsData akan handle null data dengan default values
 
     return (
         <div className="bg-[#FFF1DF] min-h-screen font-sans">
@@ -472,57 +772,57 @@ export function Frame({ onGoBack, userData = {} }) {
             {/* Content Section */}
             <div className="max-w-7xl mx-auto px-6 py-8 space-y-10">
 
-                {/* Robot + Welcome message */}
-                <div className="bg-white rounded-2xl shadow-lg p-6 flex items-center justify-between gap-6">
-                    <img 
-                        src="/group-19.png"
-                        alt="Robot Illustration"
-                        className="w-24 h-24 object-contain flex-shrink-0"
-                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/128x128/FFFFFF/0d1c31?text=ROBOT+AI"; }}
-                    />
-                    <div className="flex-1">
-                        <h2 className="text-xl font-bold text-[#0d1c31] mb-1">
-                            Hallo {userData.display_name || 'Pengguna'}, ini catatan learning kamu!
-                        </h2>
-                        <p className="text-sm text-gray-600">
-                            Pantau perkembangan dan kebiasaan belajar kamu setiap hari
-                        </p>
-                    </div>
-                </div>
+                {/* Robot + Welcome message */}
+                <div className="bg-white rounded-2xl shadow-lg p-6 flex items-center justify-between gap-6">
+                    <img 
+                        src="/group-19.png"
+                        alt="Robot Illustration"
+                        className="w-24 h-24 object-contain flex-shrink-0"
+                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/128x128/FFFFFF/0d1c31?text=ROBOT+AI"; }}
+                    />
+                    <div className="flex-1">
+                        <h2 className="text-xl font-bold text-[#0d1c31] mb-1">
+                            Hallo {finalUserData.display_name || 'Pengguna'}, ini catatan learning kamu!
+                        </h2>
+                        <p className="text-sm text-gray-600 mb-4">
+                            Pantau perkembangan dan kebiasaan belajar kamu setiap hari
+                        </p>
+                    </div>
+                </div>
 
-                {/* Most Active Time Section */}
-                <MostActiveTimeSection 
-                    timeData={userData.most_active_time?.data}
-                    insightText={userData.most_active_time?.description}
-                />
+                {/* Most Active Time Section */}
+                <MostActiveTimeSection 
+                    timeData={finalUserData.most_active_time?.data}
+                    insightText={finalUserData.most_active_time?.description}
+                />
 
-                {/* Consistency Score Section */}
-                <Card className="bg-[#fff6f6] rounded-[58px] shadow-[0px_4px_30px_#00000040] border-0">
-                    <CardContent className="p-12">
-                        <div className="flex flex-col lg:flex-row items-start gap-16">
-                            <div className="flex-1">
-                                <ConsistencyScoreSection 
-                                    score={userData.consistency_score}
-                                    insight={userData.consistency?.description}
-                                    insightText={userData.insight_text}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* Consistency Score Section */}
+                <Card className="bg-[#fff6f6] rounded-[58px] shadow-[0px_4px_30px_#00000040] border-0">
+                    <CardContent className="p-12">
+                        <div className="flex flex-col lg:flex-row items-start gap-16">
+                            <div className="flex-1">
+                                <ConsistencyScoreSection 
+                                    score={finalUserData.consistency_score || 0}
+                                    insight={finalUserData.consistency?.description}
+                                    insightText={finalUserData.insight_text}
+                                />
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
-                {/* Learning Pattern Section */}
-                <Card className="bg-[#fff6f6] rounded-[58px] shadow-[0px_4px_30px_#00000040] border-0">
-                    <CardContent className="p-8 lg:p-12"> 
-                        <div className="flex flex-col lg:flex-row items-center justify-around gap-16">
-                            <LearningPatternSection 
-                                learningPatternData={learningPatternData}
-                                mainPattern={mainPattern}
-                                description={userData.learning_pattern?.description}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
+                {/* Learning Pattern Section */}
+                <Card className="bg-[#fff6f6] rounded-[58px] shadow-[0px_4px_30px_#00000040] border-0">
+                    <CardContent className="p-8 lg:p-12"> 
+                        <div className="flex flex-col lg:flex-row items-center justify-around gap-16">
+                            <LearningPatternSection 
+                                learningPatternData={learningPatternData}
+                                mainPattern={mainPattern}
+                                description={finalUserData.learning_pattern?.description}
+                            />
+                        </div>
+                    </CardContent>
+                </Card>
 
 
                 {/* Consistent Learner Section (Quote) */}

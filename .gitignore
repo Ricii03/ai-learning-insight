@@ -22,3 +22,8 @@ Thumbs.db
 # Build files
 backend/dist/
 frontend/build/
+
+# Test and debug files (moved to tests folder)
+backend/tests/
+backend/docs/
+frontend/docs/

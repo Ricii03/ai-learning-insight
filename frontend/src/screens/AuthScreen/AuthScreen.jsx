@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { LogIn, UserPlus } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
 
 const PRIMARY_COLOR = '#1a3a5a';
 const HOVER_COLOR = '#254C75';
@@ -22,16 +23,31 @@ const InputField = ({ id, label, type = 'text', value, onChange, placeholder }) 
 
 // Formulir Login 
 const LoginForm = ({ onLoginSuccess, onSwitch }) => {
+    const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Login attempt:', { email, password });
+        setError('');
+        setLoading(true);
         
-        setTimeout(() => {
-            onLoginSuccess(); 
-        }, 1000);
+        try {
+            const result = await login(email, password);
+            
+            if (result.success) {
+                onLoginSuccess();
+            } else {
+                setError(result.error || 'Login gagal. Periksa email dan password Anda.');
+            }
+        } catch (err) {
+            setError('Terjadi kesalahan. Silakan coba lagi.');
+            console.error('Login error:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -53,12 +69,19 @@ const LoginForm = ({ onLoginSuccess, onSwitch }) => {
                 placeholder="masukkan password Anda"
             />
 
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                </div>
+            )}
+
             <button
                 type="submit"
-                className={`w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[${PRIMARY_COLOR}] hover:bg-[${HOVER_COLOR}] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[${PRIMARY_COLOR}] transition duration-150`}
+                disabled={loading}
+                className={`w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[${PRIMARY_COLOR}] hover:bg-[${HOVER_COLOR}] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[${PRIMARY_COLOR}] transition duration-150 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
                 <LogIn className="w-4 h-4 mr-2" />
-                Masuk
+                {loading ? 'Memproses...' : 'Masuk'}
             </button>
             
             <p className="text-center text-sm text-gray-600">
@@ -140,17 +163,20 @@ const RegisterForm = ({ onRegisterSuccess, onSwitch }) => {
 };
 
 // Formulir Utama AuthScreen
-const AuthScreen = ({ setLoggedIn }) => {
+const AuthScreen = () => {
+    const { isAuthenticated } = useAuth();
     const [mode, setMode] = useState('login'); 
     
     const handleLoginSuccess = () => {
-        setLoggedIn(true);
+        // Login success is handled by AuthContext
+        // Component will re-render automatically when isAuthenticated changes
     };
 
     // Langsung set isLoggedIn=true setelah daftar
     const handleRegisterSuccess = () => {
         alert('Pendaftaran Berhasil! Mengalihkan ke Dashboard...');
-        setLoggedIn(true); 
+        // For now, just show success message
+        // In future, implement register API
     };
 
     return (

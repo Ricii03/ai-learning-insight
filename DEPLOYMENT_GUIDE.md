@@ -178,7 +178,7 @@ mongodb+srv://admin:mypassword123@cluster0.uxs6xws.mongodb.net/ai-learning-insig
 
 ---
 
-## 🎨 Option 2: Deploy Backend ke Render
+## 🎨 Option 2: Deploy Backend ke Render (Alternative to Railway)
 
 ### Kelebihan:
 - ✅ Free tier tersedia

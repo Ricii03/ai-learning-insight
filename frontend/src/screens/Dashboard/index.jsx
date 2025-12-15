@@ -1,6 +1,16 @@
 import React from 'react';
 // Asumsi Card, CardHeader, dll. diimpor dari path yang benar
-import { Card, CardHeader, CardTitle, CardContent } from '../Frame/Frame'; 
+import { Card, CardHeader, CardTitle, CardContent } from '../Frame/Frame';
+
+// Helper function to get initials from name
+const getInitials = (name) => {
+    if (!name) return 'U';
+    const parts = name.split(' ');
+    if (parts.length >= 2) {
+        return (parts[0][0] + parts[1][0]).toUpperCase();
+    }
+    return name.substring(0, 2).toUpperCase();
+}; 
 
 // 1. KOMPONEN HEADER DITERIMA PROPS
 const Header = ({ userName, initials }) => (
@@ -32,8 +42,10 @@ const Header = ({ userName, initials }) => (
     </header>
 );
 
-// 2. KOMPONEN DASHBOARD DITERIMA PROPS (userName, initials)
-const Dashboard = ({ setShowInsight, userName = "Bunga", initials = "P" }) => {
+// 2. KOMPONEN DASHBOARD DITERIMA PROPS (setShowInsight, user)
+const Dashboard = ({ setShowInsight, user }) => {
+    const userName = user?.displayName || user?.email?.split('@')[0] || 'Pengguna';
+    const initials = getInitials(user?.displayName || user?.email || 'User');
     return (
         <div className="min-h-screen bg-gray-50">
             {/* Mengirim props ke Header */}

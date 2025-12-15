@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { ClockIcon, ArrowRightIcon, Zap, Lightbulb, TrendingUp } from "lucide-react"; 
+import React, { useState, useEffect } from 'react';
+import { ClockIcon, ArrowRightIcon, Zap, Lightbulb, TrendingUp } from "lucide-react";
+import { insightsAPI } from '../../services/api'; 
 
 // Komponen Pembantu
 
@@ -235,6 +236,7 @@ const ConsistencyDetailModal = ({ isOpen, onClose, data }) => {
     const topLabel = "Detail Konsistensi"; 
     const scoreText = "YOUR CONSISTENCY SCORE IS..."; 
     const learnerType = "The Consistent Learner"; 
+    const introText = "Konsistensi adalah kunci kesuksesan belajar. Skor konsistensimu menunjukkan seberapa rutin kamu belajar.";
     const defaultPlaceholderImage = "https://placehold.co/150x150/283e75/FFF?text=CONSISTENCY";
     
     const getImageSource = (level) => {
@@ -703,6 +705,11 @@ export function Frame({ onGoBack, userData = {} }) {
     
     const G_Logo = "/logo.jpeg"; 
     
+    // State untuk data insights dari backend
+    const [insightsData, setInsightsData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
     // State untuk Modal Waktu Aktif
     const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
     const [timeModalData, setTimeModalData] = useState(null);
@@ -714,6 +721,35 @@ export function Frame({ onGoBack, userData = {} }) {
     // State untuk Modal Konsistensi (BARU)
     const [isConsistencyModalOpen, setIsConsistencyModalOpen] = useState(false);
     const [consistencyModalData, setConsistencyModalData] = useState(null);
+
+    // Fetch insights from backend
+    useEffect(() => {
+        const fetchInsights = async () => {
+            if (!userData?.userId && !userData?._id) {
+                setLoading(false);
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const userId = userData.userId || userData._id;
+                const response = await insightsAPI.getCurrentInsights(userId);
+                
+                if (response.success && response.data) {
+                    setInsightsData(response.data);
+                } else {
+                    setError('Gagal mengambil data insights');
+                }
+            } catch (err) {
+                console.error('Error fetching insights:', err);
+                setError('Terjadi kesalahan saat mengambil data insights');
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchInsights();
+    }, [userData]);
 
 
     // Handler Modal Waktu Aktif
@@ -735,8 +771,11 @@ export function Frame({ onGoBack, userData = {} }) {
     };
 
 
+    // Merge insights data from backend with userData
+    const mergedData = insightsData ? { ...userData, ...insightsData } : userData;
+
     // Data Pola Belajar (Dilengkapi dengan Image dan Tips untuk Modal)
-    const rawLearningPatternData = userData.learning_pattern?.data || [
+    const rawLearningPatternData = mergedData.learning_pattern?.data || mergedData.learningPatternData || [
         { 
              label: "Visual", 
              percentage: 40, 
@@ -761,13 +800,13 @@ export function Frame({ onGoBack, userData = {} }) {
     ];
     
     const mainPattern = getMainPattern(rawLearningPatternData);
-    const patternDescription = userData.learning_pattern?.description || 'Pola Visual adalah yang paling dominan dalam caramu belajar. Kamu cenderung menggunakan gambar, diagram, dan warna untuk memahami dan mengingat informasi.';
+    const patternDescription = mergedData.learning_pattern?.description || mergedData.learningPatternDescription || 'Pola Visual adalah yang paling dominan dalam caramu belajar. Kamu cenderung menggunakan gambar, diagram, dan warna untuk memahami dan mengingat informasi.';
 
 
     // Data Konsistensi
-    const consistencyScore = userData.consistency_score || 35; // Menggunakan skor rendah sebagai contoh awal
-    const consistencyInsight = userData.consistency_insight || 'Belajar kamu masih agak acak nih. Wajar kalau lagi banyak distraksi. Yuk pelan-pelan bangun habit biar ritme makin stabil.';
-    const consistencyInsightText = userData.consistency_insight_text || 'Ayo tingkatkan konsistensimu perlahan.';
+    const consistencyScore = mergedData.consistency_score || mergedData.consistencyScore || 35;
+    const consistencyInsight = mergedData.consistency_insight || mergedData.consistencyInsight || 'Belajar kamu masih agak acak nih. Wajar kalau lagi banyak distraksi. Yuk pelan-pelan bangun habit biar ritme makin stabil.';
+    const consistencyInsightText = mergedData.consistency_insight_text || mergedData.consistencyInsightText || 'Ayo tingkatkan konsistensimu perlahan.';
 
 
     // Data Waktu Aktif
@@ -784,12 +823,44 @@ export function Frame({ onGoBack, userData = {} }) {
         },
     ];
 
-    const mostActiveTimeData = userData.most_active_time?.data && userData.most_active_time.data.length > 0
-        ? userData.most_active_time.data
+    const mostActiveTimeData = mergedData.most_active_time?.data && mergedData.most_active_time.data.length > 0
+        ? mergedData.most_active_time.data
+        : mergedData.mostActiveTimeData && mergedData.mostActiveTimeData.length > 0
+        ? mergedData.mostActiveTimeData
         : defaultTimeData; 
 
-    const activeTimeInsight = userData.most_active_time?.description || 'Kamu tipe yang perlu warm-up dulu... Manfaatkan waktu ini untuk materi yang paling menantang!';
+    const activeTimeInsight = mergedData.most_active_time?.description || mergedData.mostActiveTimeDescription || 'Kamu tipe yang perlu warm-up dulu... Manfaatkan waktu ini untuk materi yang paling menantang!';
 
+    // Show loading state
+    if (loading) {
+        return (
+            <div className="bg-[#FFF1DF] min-h-screen font-sans flex items-center justify-center">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1a3a5a] mx-auto"></div>
+                    <p className="mt-4 text-gray-600">Memuat insights...</p>
+                </div>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error && !insightsData) {
+        return (
+            <div className="bg-[#FFF1DF] min-h-screen font-sans flex items-center justify-center">
+                <div className="text-center max-w-md mx-auto p-6">
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+                        {error}
+                    </div>
+                    <button
+                        onClick={onGoBack}
+                        className="text-[#1a3a5a] hover:underline"
+                    >
+                        Kembali ke Dashboard
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-[#FFF1DF] min-h-screen font-sans">

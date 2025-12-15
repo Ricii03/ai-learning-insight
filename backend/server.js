@@ -10,12 +10,19 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173', // Development frontend
   'http://localhost:3000', // Alternative dev port
+  'https://asah-frontend.vercel.app', // Production frontend
   process.env.FRONTEND_URL, // Production frontend from env
 ];
 
 // Add production URLs if provided
 if (process.env.FRONTEND_URL) {
   allowedOrigins.push(process.env.FRONTEND_URL);
+  // Also add without trailing slash if provided with slash
+  if (process.env.FRONTEND_URL.endsWith('/')) {
+    allowedOrigins.push(process.env.FRONTEND_URL.slice(0, -1));
+  } else {
+    allowedOrigins.push(process.env.FRONTEND_URL + '/');
+  }
 }
 
 app.use(cors({

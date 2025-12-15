@@ -2,8 +2,8 @@ import axios from 'axios';
 
 // API Base URL
 // Development: http://localhost:5000
-// Production: Set via VITE_API_URL environment variable
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Production: https://asah-backend.vercel.app
+const API_BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? 'https://asah-backend.vercel.app' : 'http://localhost:5000');
 
 // Create axios instance
 const api = axios.create({

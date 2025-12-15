@@ -19,15 +19,21 @@ export const users = [{
             "period_name": "The Sunset Scholar",
             "description": "Kamu tipe yang perlu warm-up dulu...",
             "data": [
-                { "label": "Morning (06:00-11:59)", "fillPercentage": 30, "color": "bg-[#283e75]" },
-                { "label": "Afternoon (12:00-17:59)", "fillPercentage": 50, "color": "bg-[#283e75]" },
-                { "label": "Evening (18:00-05:59)", "fillPercentage": 85, "color": "bg-[#283e75]" },
+                { "label": "Morning (06:00-11:59)", "fillPercentage": 30 },
+                { "label": "Afternoon (12:00-17:59)", "fillPercentage": 50 },
+                { "label": "Evening (18:00-23:59)", "fillPercentage": 85 }, // Perhatikan jam malamnya
+                { "label": "Late Night (00:00-05:59)", "fillPercentage": 10 } // <<< BARU: Kategori ke-4 ditambahkan
             ],
         },
         "consistency": {
             "category": "High Consistency",
             "description": "Konsistensi kamu kelas expert! Disiplin banget sampai belajar udah kayak bagian dari rutinitas harian kamu."
-        }
+        },
+
+
+
+        // Cara pemanggilan:
+        // <ActiveTimeDetailModal isOpen={true} onClose={handleClose} activeTimeData={eveningData} />
     },
     {
         "user_id": 938276,

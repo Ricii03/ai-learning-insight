@@ -1,21 +1,14 @@
 Project Capstone Asah Dicoding
-Team:
-1. Mizana amaliya (React & Backend)
-2. Ganesha tania Pramesti (React & Backend)
-3. Richy Julianto (React & Backend)
-4. Farah aulia Hadi (Machine Lerning) 
-5. Iklima Fatma (Machine Lerning)
 
-AI Learning Insight
-AI Learning Insight adalah fitur dashboard untuk website Studi Independent yang dirancang untuk membantu mahasiswa memahami pola belajar mereka. Terinspirasi dari Strava, sistem ini menganalisis aktivitas belajar pengguna dan memberikan insight yang actionable untuk meningkatkan efektivitas belajar.
+Tim Pengembang: Mizana Amaliya (React & Backend) Ganesha Tania Pramesti (React & Backend) Richy Julianto (React & Backend) Farah Aulia Hadi (Machine Lerning) Iklima Fatma Aliena (Machine Lerning)
 
-About The Project
-Sistem ini menganalisis aktivitas belajar pengguna dan menghasilkan tiga informasi utama. Pertama, Most Active Time yang menunjukkan kapan pengguna paling fokus belajar seperti pagi, siang, atau malam, sehingga pengguna dapat memanfaatkan waktu tersebut untuk materi yang lebih sulit. Kedua, Consistency Score yang memberikan skor tingkat konsistensi belajar dari hari ke hari dengan insight seperti "Kamu belajar 4 dari 7 hari minggu ini, tingkat konsistenmu tinggi". Ketiga, Learning Pattern yang mengelompokkan siswa berdasarkan pola aktivitas menjadi Consistent Learner, Fast Learner, atau Reflective Learner.
+AI Learning Insight project kami adalah sebuah fitur dashboard untuk website Studi Independent yang dirancang untuk membantu mahasiswa memahami pola belajar mereka. Sistem ini menganalisis aktivitas belajar pengguna dan memberikan insight yang actionable untuk meningkatkan efektivitas belajar.Sistem ini menganalisis aktivitas belajar pengguna dan menghasilkan tiga informasi utama. Pertama, Most Active Time yang menunjukkan kapan pengguna paling fokus belajar seperti pagi, siang, atau malam, sehingga pengguna dapat memanfaatkan waktu tersebut untuk materi yang lebih sulit. Kedua, Consistency Score yang memberikan skor tingkat konsistensi belajar dari hari ke hari dengan insight seperti "Kamu belajar 4 dari 7 hari minggu ini, tingkat konsistenmu tinggi". Ketiga, Learning Pattern yang mengelompokkan siswa berdasarkan pola aktivitas menjadi Consistent Learner, Fast Learner, atau Reflective Learner.
 
-Tech Stack
-Backend menggunakan Node.js dengan Express untuk API server, MongoDB sebagai database, dan Python untuk machine learning model. Frontend dibangun dengan React untuk user interface. Machine learning menggunakan Python dengan library scikit-learn, pandas, dan numpy untuk analisis pola belajar.
+Petunjuk Setup Environment
 
-Getting Started
-Backend setup memerlukan Node.js dan MongoDB. Install dependencies dengan npm install di folder backend, buat file .env dengan konfigurasi database dan port, lalu jalankan server dengan npm run dev.
-Machine learning setup memerlukan Python 3.11 atau lebih tinggi. Buat virtual environment dengan python -m venv .venv, aktifkan dengan .venv\Scripts\activate di Windows atau source .venv/bin/activate di Mac/Linux, install dependencies dengan pip install -r backend/model_dev/requirements.txt, dan test dengan python test_python.py.
-Frontend setup memerlukan install dependencies dengan npm install di folder frontend dan jalankan development server dengan npm start.
+Prerequisite Pastikan sistem Anda telah menginstal Node.js versi 18 atau lebih tinggi, npm atau yarn sebagai package manager, dan MongoDB untuk database lokal.
+Setup Backend Clone repository ini ke komputer lokal Anda. Masuk ke direktori backend dan install semua dependencies dengan menjalankan npm install. Copy file .env.example menjadi .env dengan perintah cp .env.example .env pada Linux atau Mac, atau copy .env.example .env pada Windows. Isi file .env dengan konfigurasi sesuai environment lokal Anda. Jalankan MongoDB di sistem lokal Anda. Untuk menjalankan server backend dalam mode development, gunakan perintah npm run dev.
+Setup Frontend Masuk ke direktori frontend dan install semua dependencies dengan menjalankan npm install. Copy file .env.example menjadi .env dengan perintah cp .env.example .env pada Linux atau Mac, atau copy .env.example .env pada Windows. Isi file .env dengan URL backend lokal Anda. Untuk menjalankan aplikasi frontend dalam mode development, gunakan perintah npm run dev.
+Setup Model Machine Learning Download model Machine Learning dari Google Drive melalui tautan berikut: https://drive.google.com/drive/u/1/folders/1-D9s_oOLBRWbTkeQUGVftVz5T-1LuY10 Setelah download selesai, ekstrak file model dan letakkan di direktori backend/model_dev/. Model akan otomatis di-load oleh backend saat aplikasi berjalan. Pastikan semua dependencies Python yang diperlukan sudah terinstall dengan menjalankan pip install -r requirements.txt di direktori backend.
+Menjalankan Aplikasi Running Locally Untuk menjalankan aplikasi secara lengkap dalam environment lokal, pastikan MongoDB sudah berjalan di sistem Anda. Buka terminal pertama dan masuk ke direktori backend, kemudian jalankan npm run dev untuk memulai backend server. Buka terminal kedua dan masuk ke direktori frontend, kemudian jalankan npm run dev untuk memulai frontend development server. Akses aplikasi melalui browser di alamat yang ditampilkan di terminal frontend
+Accessing Deployed Application Untuk mengakses aplikasi yang sudah di-deploy, kunjungi URL yang sudah kami deploy.

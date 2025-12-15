@@ -72,7 +72,7 @@ const userSchema = new mongoose.Schema({
 });
 
 // Indexes
-userSchema.index({ userId: 1 });
+// Note: userId already has index: true in schema definition, so don't duplicate
 userSchema.index({ displayName: 1 });
 userSchema.index({ email: 1 });
 

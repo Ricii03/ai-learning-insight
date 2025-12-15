@@ -1,5 +1,5 @@
-const LearningActivity = require('../models/LearningActivity');
-const Insight = require('../models/Insight');
+const LearningActivity = require('../models/LearningActivity'); // File name is LearningActivity.js (uppercase)
+const Insight = require('../models/insight');
 const User = require('../models/User');
 const { generateInsights } = require('../services/mlService');
 

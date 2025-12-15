@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRightIcon, ClockIcon } from "lucide-react";
+import { ArrowRightIcon, ClockIcon, Lightbulb, TrendingUp } from "lucide-react";
 import { useAuth } from '../../contexts/AuthContext';
 import { insightsAPI } from '../../services/api'; 
 
@@ -34,28 +34,296 @@ export const CardContent = ({ className = "", children }) => (
     </div>
 );
 
-const Button = ({ className = "", children, onClick, variant = 'primary' }) => {
-    let baseClasses = `inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors 
-                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 
-                disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2`;
-    
-    let variantClasses = 'bg-[#1a3a5a] text-white hover:bg-[#254C75] focus-visible:ring-[#254C75]';
-    
-    if (variant === 'secondary') {
-        variantClasses = 'bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-300';
-    }
+const Button = ({ className = "", children, onClick, variant = 'primary', disabled = false }) => {
+    let baseClasses = `inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors 
+                focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 
+                disabled:pointer-events-none disabled:opacity-50 h-10 px-4 py-2`;
+    
+    let variantClasses = 'bg-[#1a3a5a] text-white hover:bg-[#254C75] focus-visible:ring-[#254C75]';
+    
+    if (variant === 'secondary') {
+        variantClasses = 'bg-gray-100 text-gray-800 hover:bg-gray-200 focus-visible:ring-gray-300';
+    }
 
-    return (
-        <button 
-            onClick={onClick} 
-            className={`${baseClasses} ${variantClasses} ${className}`}
-        >
-            {children}
-        </button>
-    );
+    return (
+        <button 
+            onClick={onClick} 
+            disabled={disabled}
+            className={`${baseClasses} ${variantClasses} ${className}`}
+        >
+            {children}
+        </button>
+    );
 };
 
 // AI LEARNING INSIGHT PAGE
+
+// MODAL COMPONENTS
+
+// 1. ActiveTimeDetailModal
+const ActiveTimeDetailModal = ({ isOpen, onClose, data }) => {
+    if (!isOpen || !data) return null;
+
+    const { 
+        activeTime,  
+        timeRange,  
+        description,
+        learnerType,
+    } = data;
+    
+    const label = "Most Active Time";
+    const defaultPlaceholderImage = "https://placehold.co/150x150/FFC107/000000?text=PRIME+TIME";
+
+    // LOGIC PENENTUAN PATH GAMBAR BERDASARKAN activeTime
+    const getImageSource = (time) => {
+        const normalizedTime = time.toUpperCase().replace(/\s/g, '_');
+        switch (normalizedTime) {
+            case 'MORNING':
+                return "/images/most_active_time/morning_learner.png";
+            case 'AFTERNOON':
+                return "/images/most_active_time/afternoon_learner.png";
+            case 'LATE_NIGHT':
+            case 'NIGHT':
+                return "/images/most_active_time/night_learner.png"; 
+            case 'EVENING':
+            default:
+                return "/images/most_active_time/evening_learner.png"; 
+        }
+    };
+    
+    const imageSource = getImageSource(activeTime);
+
+    // RENDER MODAL
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full p-0 overflow-hidden bg-white shadow-xl rounded-[32px] !border-0"> 
+                <CardHeader className="p-0">
+                    <div className="relative p-6 bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a]">
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <ClockIcon className="w-8 h-8 flex-shrink-0" />
+                            <h3 className="text-xl font-bold">{label}</h3>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="text-center mb-6">
+                        <p className="text-sm text-gray-700 italic mb-3">
+                            Setiap orang punya waktu emas untuk belajar. Dan waktu terbaikmu adalah....
+                        </p>
+                        <h4 className="text-2xl font-extrabold text-[#1a3a5a] mb-6">
+                            {activeTime?.toUpperCase() || 'N/A'} ({timeRange || 'N/A'})
+                        </h4>
+                        
+                        <div className="w-full flex justify-center mb-6">
+                            <img 
+                                src={imageSource} 
+                                alt={`${learnerType || 'Learner'} Illustration`}
+                                className="w-32 h-32 object-contain"
+                                onError={(e) => { e.target.onerror = null; e.target.src = defaultPlaceholderImage; }}
+                            />
+                        </div>
+
+                        <h5 className="text-xl font-bold text-gray-900 mb-3">
+                             {learnerType || 'Learner'} 
+                        </h5>
+                        <p className="text-sm text-gray-800 leading-relaxed mb-8"> 
+                            {description || 'Data tidak tersedia.'} 
+                        </p>
+                    </div>
+                    
+                    <div className="flex justify-center">
+                        <Button 
+                            onClick={onClose} 
+                            className="w-40 py-2 px-6 bg-[#1a3a5a] hover:bg-[#254C75] text-white text-base font-semibold"
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+// 2. LearningPatternDetailModal
+const LearningPatternDetailModal = ({ isOpen, onClose, data }) => {
+    if (!isOpen || !data) return null;
+
+    const { 
+        patternType,
+        description, 
+    } = data;
+    
+    // Data statis yang tidak berubah
+    const topLabel = "Learning Pattern"; 
+    const introText = "Setiap orang punya cara belajar yang berbeda. Pola yang paling mencerminkan gaya belajarmu adalah....";
+    const defaultPlaceholderImage = "https://placehold.co/150x150/50C878/FFFFFF?text=PATTERN";
+
+    // LOGIC PENENTUAN PATH GAMBAR BERDASARKAN patternType
+    const getImageSource = (type) => {
+        if (!type) return "/images/learning_pattern/consistent_learner.png";
+        const normalizedType = type.toUpperCase().replace(/\s/g, '_');
+        
+        switch (normalizedType) {
+            case 'CONSISTENT_LEARNER':
+                return "/images/learning_pattern/consistent_learner.png"; 
+            case 'FAST_LEARNER':
+                return "/images/learning_pattern/fast_learner.png"; 
+            case 'REFLECTIVE_LEARNER':
+                return "/images/learning_pattern/reflective_learner.png";
+            default:
+                return "/images/learning_pattern/consistent_learner.png"; 
+        }
+    };
+    
+    const imagePath = getImageSource(patternType);
+
+    // RENDER MODAL
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full p-0 overflow-hidden bg-white shadow-xl rounded-[32px] !border-0">
+                <CardHeader className="p-0">
+                    <div className="relative p-6 bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a]"> 
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <Lightbulb className="w-8 h-8 flex-shrink-0" /> 
+                            <h3 className="text-xl font-bold">{topLabel}</h3>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="text-center mb-6">
+                        <p className="text-sm text-gray-700 italic mb-3">
+                            {introText}
+                        </p>
+                        
+                        <div className="w-full flex justify-center mb-6">
+                            <img 
+                                src={imagePath}
+                                alt={`${patternType || 'Pattern'} Illustration`}
+                                className="w-32 h-32 object-contain" 
+                                onError={(e) => { e.target.onerror = null; e.target.src = defaultPlaceholderImage; }}
+                            />
+                        </div>
+
+                        <h5 className="text-xl font-bold text-gray-900 mb-3">
+                            {patternType || 'N/A'}
+                        </h5>
+                        <p className="text-sm text-gray-800 leading-relaxed mb-8"> 
+                            {description || 'Pola belajar belum terdeteksi.'} 
+                        </p>
+
+                    </div>
+                    
+                    <div className="flex justify-center mt-6">
+                        <Button 
+                            onClick={onClose} 
+                            className="w-40 py-2 px-6 bg-[#1a3a5a] hover:bg-[#254C75] text-white text-base font-semibold"
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+// 3. ConsistencyDetailModal
+const ConsistencyDetailModal = ({ isOpen, onClose, data }) => {
+    if (!isOpen || !data) return null;
+
+    const { 
+        consistencyLevel, 
+        description,      
+        scoreValue        
+    } = data;
+    
+    const topLabel = "Detail Konsistensi"; 
+    const scoreText = "YOUR CONSISTENCY SCORE IS..."; 
+    const learnerType = "The Consistent Learner"; 
+    const introText = "Konsistensi adalah kunci kesuksesan. Skor konsistensimu menunjukkan seberapa rutin kamu belajar.";
+    const defaultPlaceholderImage = "https://placehold.co/150x150/283e75/FFF?text=CONSISTENCY";
+    
+    const getImageSource = (level) => {
+        if (!level) return "/images/consistency_score/high_consistency.png";
+        const normalizedLevel = level.toUpperCase();
+
+        switch (normalizedLevel) {
+            case 'LOW':
+                return "/images/consistency_score/low_consistency.png"; 
+            case 'MEDIUM':
+            case 'MODERATE':
+                return "/images/consistency_score/medium_consistency.png"; 
+            case 'HIGH':
+            default:
+                return "/images/consistency_score/high_consistency.png"; 
+        }
+    };
+    
+    const imagePath = getImageSource(consistencyLevel);
+    
+    const statusLabel = (consistencyLevel || 'HIGH').toUpperCase() + " Consistency";
+    
+    // RENDER MODAL
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
+            
+            <Card className="max-w-md w-full p-0 overflow-hidden bg-white shadow-xl rounded-[32px] !border-none">
+                <CardHeader className="p-0">
+                    <div className="relative p-6 bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a]"> 
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <TrendingUp className="w-8 h-8 flex-shrink-0" />
+                            <h3 className="text-xl font-bold">{topLabel}</h3>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="text-center mb-2">
+                        <p className="text-sm text-gray-700 italic mb-3">
+                            {introText}
+                        </p>
+                        
+                        <h4 className="text-xl font-extrabold text-[#1a3a5a] mb-3"> 
+                            {scoreText.toUpperCase()}
+                        </h4>
+                        
+                        <p className="text-3xl font-bold text-[#283e75] mb-4">
+                            {statusLabel} ({scoreValue || 0}%)
+                        </p>
+
+                        <div className="w-full flex justify-center mb-3">
+                            <img 
+                                src={imagePath} 
+                                alt={`${statusLabel} Illustration`}
+                                className="w-32 h-32 object-contain" 
+                                onError={(e) => { e.target.onerror = null; e.target.src = defaultPlaceholderImage; }}
+                            />
+                        </div>
+
+                        <h5 className="text-xl font-bold text-gray-900 mb-3">
+                            {learnerType}
+                        </h5>
+                    
+                        <p className="text-sm text-gray-800 leading-relaxed mb-8">
+                            {description || 'Ayo tingkatkan konsistensi belajarmu!'} 
+                        </p>
+
+                    </div>
+                
+                    {/* TOMBOL KECIL DI TENGAH */}
+                    <div className="flex justify-center mt-6">
+                        <Button 
+                            onClick={onClose} 
+                            className="w-40 py-2 px-6 bg-[#1a3a5a] hover:bg-[#254C75] text-white text-base font-semibold"
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
 
 // 1. ConsistencyScoreSection 
 // Component ini menerima data dari backend melalui props
@@ -68,20 +336,35 @@ const Button = ({ className = "", children, onClick, variant = 'primary' }) => {
 //   - score: consistencyScore dari backend insights API (insightsData.consistencyScore)
 //   - insight: description dari backend insights API (calculated based on score)
 //   - insightText: insights text dari backend insights API (insightsData.insights)
-const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!' }) => {
+//   - onShowDetail: handler untuk membuka modal detail
+const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!', onShowDetail }) => {
     // score berasal dari backend: insightsData.consistencyScore
     // Pastikan score adalah number dan dalam range 0-100
     const numericScore = typeof score === 'number' ? score : parseFloat(score || 0);
     const normalizedScore = Math.max(0, Math.min(100, numericScore)); // Clamp antara 0-100
     
-    // Format score untuk display (1 desimal)
-    const displayScore = normalizedScore.toFixed(1);
+    // Format score untuk display (tanpa desimal, seperti di Framebaru.jsx)
+    const displayScore = Math.round(normalizedScore);
     
     // angle dihitung dari score: score * 3.6 (untuk circular progress)
     // 100% = 360 derajat, jadi 1% = 3.6 derajat
     const chartColor = '#283e75'; 
     const backgroundColor = '#e0e0e0'; 
     const angle = normalizedScore * 3.6;
+    
+    // Logika penentuan Status dan Tips untuk Modal
+    let consistencyLevel = 'HIGH';
+    if (normalizedScore < 50) {
+        consistencyLevel = 'LOW';
+    } else if (normalizedScore < 80) {
+        consistencyLevel = 'MEDIUM';
+    }
+
+    const detailData = {
+        consistencyLevel: consistencyLevel,
+        scoreValue: displayScore,
+        description: insight,
+    };
     
     console.log('[ConsistencyScoreSection] Received score from backend:', score);
     console.log('[ConsistencyScoreSection] Normalized score:', normalizedScore);
@@ -139,11 +422,14 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
                                 Pelajari lebih lanjut tips dan trik untuk mempertahankan momentum belajarmu!
                             </p>
 
-                            <Button className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-8 lg:h-10 px-6 gap-1"> 
-                                <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]"> 
-                                    SELENGKAPNYA
-                                </span>
-                            </Button>
+                            <Button 
+                                onClick={() => onShowDetail && onShowDetail(detailData)}
+                                className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-8 lg:h-10 px-6 gap-1"
+                            > 
+                                <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]"> 
+                                    SELENGKAPNYA
+                                </span>
+                            </Button>
                         </div>
                     </div>
                     
@@ -155,7 +441,7 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
 
 
 // 2. MostActiveTimeSection 
-const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fokus terbaikmu!' }) => {
+const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fokus terbaikmu!', onShowDetail }) => {
     
     const mapTimeToColor = (data) => {
         return data.map(time => {
@@ -166,8 +452,10 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
                 colorClass = 'bg-amber-400'; 
             } else if (timeLabel.includes('afternoon')) {
                 colorClass = 'bg-blue-400'; 
-            } else if (timeLabel.includes('evening') || timeLabel.includes('night')) {
-                colorClass = 'bg-indigo-700';
+            } else if (timeLabel.includes('evening')) {
+                colorClass = 'bg-indigo-700'; 
+            } else if (timeLabel.includes('late night') || timeLabel.includes('night')) { 
+                colorClass = 'bg-purple-900'; 
             }
             
             return {
@@ -179,22 +467,22 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
 
     const coloredTimeData = mapTimeToColor(timeData);
 
+    const mostActive = coloredTimeData.reduce((prev, current) => 
+        (prev.fillPercentage > current.fillPercentage) ? prev : current, 
+        { fillPercentage: -1, label: 'N/A', description: 'Data tidak tersedia.', learnerType: 'N/A', learnerImage: '' } 
+    );
+    
+    const finalInsight = `Waktu belajarmu yang paling produktif adalah ${mostActive.label.split('(')[0].trim()}. ${insightText}`;
+    
+    const labelParts = mostActive.label.match(/(.*)\s\((.*)\)/) || [null, mostActive.label, 'N/A'];
 
-    // insight yang mengandung persentase 
-    const getActiveTimeInsight = (data, baseInsight) => {
-        if (!data || data.length === 0) return 'Data waktu aktif belum tersedia. Mulai belajar untuk melihat polanya!';
-        
-        const mostActive = data.reduce((prev, current) => 
-          (prev.fillPercentage > current.fillPercentage) ? prev : current
-        );
-        const finalInsight = baseInsight.replace(
-            /Manfaatkan waktu ini untuk materi yang paling menantang!/, 
-            `Kamu memiliki tingkat aktivitas ${mostActive.fillPercentage}% di waktu ini. Manfaatkan waktu ini untuk materi yang paling menantang!`
-        );
-        return `Waktu belajarmu yang paling produktif adalah ${mostActive.label.split('(')[0].trim()}. ${finalInsight}`;
-    };
-
-    const finalInsight = getActiveTimeInsight(coloredTimeData, insightText); 
+    const detailData = {
+        activeTime: labelParts[1]?.trim() || mostActive.label.split('(')[0].trim() || 'Waktu Terbaik',
+        timeRange: labelParts[2]?.replace(')', '').trim() || 'N/A', 
+        description: mostActive.description || 'Data tidak tersedia.', 
+        learnerType: mostActive.learnerType || 'Learner', 
+        learnerImage: mostActive.learnerImage || '', 
+    }; 
 
     return (
         <section className="relative w-full">
@@ -253,10 +541,14 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
                                 <div className="relative text-center">
                                     <p 
                                         className="font-['Inter',Helvetica] font-normal text-xs lg:text-base text-black tracking-[0] leading-normal mb-3 lg:mb-4"
-                                        dangerouslySetInnerHTML={{ __html: finalInsight }}
-                                    />
+                                    >
+                                        {finalInsight}
+                                    </p>
                                             
-                                    <Button className="bg-[#283e75] hover:bg-[#283e75]/90 rounded-full h-8 lg:h-10 px-6 lg:px-8 gap-1">
+                                    <Button 
+                                        onClick={() => onShowDetail && onShowDetail(detailData)} 
+                                        className="bg-[#283e75] hover:bg-[#283e75]/90 rounded-full h-8 lg:h-10 px-6 lg:px-8 gap-1"
+                                    >
                                         <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]">
                                             SELENGKAPNYA
                                         </span>
@@ -288,28 +580,34 @@ const generateConicGradient = (data) => {
 };
 
 
-const LearningPatternSection = ({ learningPatternData = [], mainPattern = { label: "N/A" }, description = 'Pola belajar belum terdeteksi.' }) => {
-    
-    // Fallback jika data kosong
-    const dataToDisplay = learningPatternData.length > 0 ? learningPatternData : [
-        { label: "Data not available", percentage: 100, color: "#ccc" }
-    ];
+const LearningPatternSection = ({ learningPatternData = [], mainPattern = { label: "N/A" }, description = 'Pola belajar belum terdeteksi.', onShowDetail }) => {
+    
+    // Fallback jika data kosong
+    const dataToDisplay = learningPatternData.length > 0 ? learningPatternData : [
+        { label: "Data not available", percentage: 100, color: "#ccc" }
+    ];
 
-    const pieChartStyle = {
-        background: generateConicGradient(dataToDisplay),
-    };
+    // Data lengkap untuk Modal Learning Pattern
+    const detailData = {
+        patternType: mainPattern.label || 'N/A',
+        description: description,
+    };
 
-    return (
-        <section className="w-full py-8 px-6">
-            
-            <div className="mb-8 text-left">
-                <h2 className="font-['Inter',Helvetica] font-bold text-2xl text-black mb-1.5">
-                    Learning Pattern
-                </h2>
-                <p className="font-['Open_Sans',Helvetica] font-normal text-base text-black/70">
-                    Temukan kategori yang mencerminkan caramu belajar.
-                </p>
-            </div>
+    const pieChartStyle = {
+        background: generateConicGradient(dataToDisplay),
+    };
+
+    return (
+        <section className="w-full py-8 px-6 bg-[#ffffff] rounded-3xl lg:rounded-[58px] shadow-xl border-0">
+            
+            <div className="mb-8 text-left">
+                <h2 className="font-['Inter',Helvetica] font-bold text-2xl text-black mb-1.5">
+                    Learning Pattern
+                </h2>
+                <p className="font-['Open_Sans',Helvetica] font-normal text-base text-black/70">
+                    Temukan kategori yang mencerminkan caramu belajar.
+                </p>
+            </div>
                 
             <div className="flex flex-col lg:flex-row items-center gap-10 mb-8">
                 <div className="flex items-center gap-6 w-fit lg:w-auto">
@@ -351,11 +649,14 @@ const LearningPatternSection = ({ learningPatternData = [], mainPattern = { labe
                     {description}
                 </p>
                     
-                <Button className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-9 px-7 gap-1.5">
-                    <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-sm lg:text-base tracking-[0] leading-[normal]">
-                        SELENGKAPNYA
-                    </span>
-                </Button>
+                <Button 
+                    onClick={() => onShowDetail && onShowDetail(detailData)}
+                    className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-9 px-7 gap-1.5"
+                >
+                    <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-sm lg:text-base tracking-[0] leading-[normal]">
+                        SELENGKAPNYA
+                    </span>
+                </Button>
             </div>
         </section>
     );
@@ -364,51 +665,24 @@ const LearningPatternSection = ({ learningPatternData = [], mainPattern = { labe
 
 // 4. ConsistentLearnerSection (Quote Section) 
 const ConsistentLearnerSection = () => {
-    const logoColor = "#25586e";
-    const bgColor = "#fcf9f2";
-    const shadowSize = '5px'; 
-    const finalShadow = `0 0 0 ${shadowSize} ${bgColor}, 0 0 0 ${parseInt(shadowSize) + 1}px ${logoColor}`;
-
-    return (
-        <div className="w-full overflow-hidden" style={{ backgroundColor: bgColor }}> 
-            <div className="relative py-12 lg:py-20 max-w-5xl mx-auto px-4 lg:px-8">
-                {decorativeQuoteLogos.map((logo, index) => (
-                    <div 
-                        key={index} 
-                        className={`hidden lg:block absolute ${logo.top} ${logo.left} w-20 h-20`}
-                        style={{ zIndex: 1 }}
-                    >
-                        <div className="relative w-full h-full flex items-center justify-center">
-                            <div 
-                                className={`w-full h-full rounded-full flex items-center justify-center`}
-                                style={{
-                                    backgroundColor: logoColor,
-                                    boxShadow: finalShadow,
-                                }}
-                            >
-                                <span className="text-white font-serif text-4xl leading-none font-bold">g</span>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-                
-                <section 
-                    className={`font-['Open_Sans',Helvetica] font-semibold text-lg lg:text-xl tracking-[0] leading-normal text-center max-w-[884px] mx-auto relative z-20`}
-                    style={{ lineHeight: '1.5', color: logoColor }}
+    return (
+        <div className="w-full overflow-hidden bg-[#fff6f6]"> 
+            <div className="relative py-12 lg:py-20 max-w-5xl mx-auto px-4 lg:px-8 text-center">
+                <section 
+                    className={`font-['Open_Sans',Helvetica] font-semibold text-lg lg:text-xl tracking-[0] leading-normal text-center max-w-[884px] mx-auto relative z-20 text-[#25586e]`}
+                    style={{ lineHeight: '1.5' }}
                 >
                     "Hasil yang luar biasa datang bukan dari tindakan yang besar, tetapi dari konsistensi tindakan-tindakan kecil."
                 </section>
                 <div 
-                    className={`font-['Inter',Helvetica] font-semibold text-sm lg:text-base text-center mt-8 relative z-20`}
-                    style={{ color: logoColor }}
+                    className={`font-['Inter',Helvetica] font-semibold text-sm lg:text-base text-center mt-8 relative z-20 text-[#25586e]`}
                 >
                     – Thompson Abbot -
                 </div>
-                
-            </div>
-            <div className="w-full h-12 lg:h-16 bg-[#25586e]" /> 
+            </div>
+            <div className="w-full h-12 lg:h-16 bg-[#25586e]" /> 
         </div>
-    );
+    );
 };
 
 // HELPER FUNCTION
@@ -462,12 +736,67 @@ const transformInsightsData = (insightsData, user) => {
     
     const timeInfo = timeMap[mostActiveTime] || timeMap['morning'];
     
-    // Create time distribution data
+    // Create time distribution data with descriptions for modal
+    const timeDataConfig = {
+        'morning': { 
+            label: 'Morning (06:00-11:59)', 
+            description: 'Pagi hari adalah waktu kamu paling segar dan fokus. Kamu adalah Early Bird Sejati, manfaatkan energi pagi ini untuk menyelesaikan tugas-tugas terberat.',
+            learnerType: 'Early Bird Learner',
+            learnerImage: 'https://placehold.co/150x150/FFC107/000000?text=MORNING'
+        },
+        'afternoon': { 
+            label: 'Afternoon (12:00-17:59)', 
+            description: 'Siang hari itu prime time kamu! Kepala udah gak ngantuk pagi, tapi juga belum masuk mode capek. Kombinasi perfect buat belajar dengan santai tapi tetap produktif.',
+            learnerType: 'Prime-Time Learner',
+            learnerImage: 'https://placehold.co/150x150/007bff/FFFFFF?text=AFTERNOON'
+        },
+        'evening': { 
+            label: 'Evening (18:00-23:59)', 
+            description: 'Malam hari kamu baru bisa fokus, setelah semua urusan selesai. Kamu adalah Night Owl yang termotivasi, gunakan waktu ini untuk meninjau ulang materi.',
+            learnerType: 'Night Owl Learner',
+            learnerImage: 'https://placehold.co/150x150/4B0082/FFFFFF?text=EVENING'
+        },
+        'night': { 
+            label: 'Night (00:00-05:59)', 
+            description: 'Hanya saat semua orang tidur, kamu menemukan ketenangan. Kamu adalah Midnight Warrior, gunakan keheningan ini untuk fokus mendalam pada satu subjek.',
+            learnerType: 'Midnight Warrior Learner',
+            learnerImage: 'https://placehold.co/150x150/222222/FFFFFF?text=NIGHT'
+        }
+    };
+    
     const timeData = [
-        { label: 'Morning (06:00-11:59)', fillPercentage: 0, color: 'bg-amber-400' },
-        { label: 'Afternoon (12:00-17:59)', fillPercentage: 0, color: 'bg-blue-400' },
-        { label: 'Evening (18:00-23:59)', fillPercentage: 0, color: 'bg-indigo-700' },
-        { label: 'Night (00:00-05:59)', fillPercentage: 0, color: 'bg-indigo-700' }
+        { 
+            label: timeDataConfig.morning.label, 
+            fillPercentage: 0, 
+            color: 'bg-amber-400',
+            description: timeDataConfig.morning.description,
+            learnerType: timeDataConfig.morning.learnerType,
+            learnerImage: timeDataConfig.morning.learnerImage
+        },
+        { 
+            label: timeDataConfig.afternoon.label, 
+            fillPercentage: 0, 
+            color: 'bg-blue-400',
+            description: timeDataConfig.afternoon.description,
+            learnerType: timeDataConfig.afternoon.learnerType,
+            learnerImage: timeDataConfig.afternoon.learnerImage
+        },
+        { 
+            label: timeDataConfig.evening.label, 
+            fillPercentage: 0, 
+            color: 'bg-indigo-700',
+            description: timeDataConfig.evening.description,
+            learnerType: timeDataConfig.evening.learnerType,
+            learnerImage: timeDataConfig.evening.learnerImage
+        },
+        { 
+            label: timeDataConfig.night.label, 
+            fillPercentage: 0, 
+            color: 'bg-indigo-700',
+            description: timeDataConfig.night.description,
+            learnerType: timeDataConfig.night.learnerType,
+            learnerImage: timeDataConfig.night.learnerImage
+        }
     ];
     
     // Set active time to 80%, distribute remaining to others
@@ -495,10 +824,14 @@ const transformInsightsData = (insightsData, user) => {
     const patternInfo = patternMap[learningPattern] || patternMap['Reflective Learner'];
 
     // Create learning pattern data (simplified - you might want to get actual percentages from backend)
+    // Ensure no duplicate labels in the array
+    const allPatterns = ['Consistent Learner', 'Fast Learner', 'Reflective Learner'];
+    const otherPatterns = allPatterns.filter(p => p !== learningPattern);
+    
     const learningPatternData = [
         { label: learningPattern, percentage: 60, color: patternInfo.color },
-        { label: learningPattern === 'Consistent Learner' ? 'Fast Learner' : 'Consistent Learner', percentage: 25, color: learningPattern === 'Consistent Learner' ? '#0c9bab' : '#44dcd0' },
-        { label: 'Reflective Learner', percentage: 15, color: '#0d1c31' }
+        { label: otherPatterns[0], percentage: 25, color: patternMap[otherPatterns[0]].color },
+        { label: otherPatterns[1], percentage: 15, color: patternMap[otherPatterns[1]].color }
     ];
 
     // Consistency description based on score
@@ -542,6 +875,30 @@ export function Frame({ onGoBack, userData = {} }) {
     const [insightsData, setInsightsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // State untuk Modal
+    const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+    const [timeModalData, setTimeModalData] = useState(null);
+    const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+    const [patternModalData, setPatternModalData] = useState(null);
+    const [isConsistencyModalOpen, setIsConsistencyModalOpen] = useState(false);
+    const [consistencyModalData, setConsistencyModalData] = useState(null);
+
+    // Handler Modal
+    const handleShowTimeDetail = (data) => {
+        setTimeModalData(data);
+        setIsTimeModalOpen(true);
+    };
+
+    const handleShowPatternDetail = (data) => {
+        setPatternModalData(data);
+        setIsPatternModalOpen(true);
+    };
+    
+    const handleShowConsistencyDetail = (data) => {
+        setConsistencyModalData(data);
+        setIsConsistencyModalOpen(true);
+    };
 
     const imagePath = "https://placehold.co/100x100/1a3a5a/FFF1DF?text=G"; 
     const G_Logo = imagePath;
@@ -715,22 +1072,13 @@ export function Frame({ onGoBack, userData = {} }) {
                 `}</style>
 
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <button 
-                        onClick={onGoBack} 
-                        className="mb-6 flex items-center text-white/90 hover:text-white transition text-sm"
-                    >
-                        <svg 
-                            xmlns="http://www.w3.org/2000/svg" 
-                            className="h-5 w-5 mr-1" 
-                            fill="none" 
-                            viewBox="0 0 24 24" 
-                            stroke="currentColor" 
-                            strokeWidth={2}
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        Kembali ke Dashboard
-                    </button>
+                    <button 
+                        onClick={onGoBack} 
+                        className="mb-6 flex items-center text-white/90 hover:text-white transition text-sm"
+                    >
+                        <ArrowRightIcon className="w-5 h-5 mr-1 rotate-180" />
+                        Kembali ke Dashboard
+                    </button>
 
                     <div className="flex items-start justify-between gap-8">
                         <div className="flex-1 max-w-md">
@@ -794,44 +1142,52 @@ export function Frame({ onGoBack, userData = {} }) {
                 <MostActiveTimeSection 
                     timeData={finalUserData.most_active_time?.data}
                     insightText={finalUserData.most_active_time?.description}
+                    onShowDetail={handleShowTimeDetail}
                 />
 
                 {/* Consistency Score Section */}
-                <Card className="bg-[#fff6f6] rounded-[58px] shadow-[0px_4px_30px_#00000040] border-0">
-                    <CardContent className="p-12">
-                        <div className="flex flex-col lg:flex-row items-start gap-16">
-                            <div className="flex-1">
-                                <ConsistencyScoreSection 
-                                    score={finalUserData.consistency_score || 0}
-                                    insight={finalUserData.consistency?.description}
-                                    insightText={finalUserData.insight_text}
-                                />
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
+                <ConsistencyScoreSection 
+                    score={finalUserData.consistency_score || 0}
+                    insight={finalUserData.consistency?.description}
+                    insightText={finalUserData.insight_text}
+                    onShowDetail={handleShowConsistencyDetail}
+                />
 
                 {/* Learning Pattern Section */}
-                <Card className="bg-[#fff6f6] rounded-[58px] shadow-[0px_4px_30px_#00000040] border-0">
-                    <CardContent className="p-8 lg:p-12"> 
-                        <div className="flex flex-col lg:flex-row items-center justify-around gap-16">
-                            <LearningPatternSection 
-                                learningPatternData={learningPatternData}
-                                mainPattern={mainPattern}
-                                description={finalUserData.learning_pattern?.description}
-                            />
-                        </div>
-                    </CardContent>
-                </Card>
+                <LearningPatternSection 
+                    learningPatternData={learningPatternData}
+                    mainPattern={mainPattern}
+                    description={finalUserData.learning_pattern?.description}
+                    onShowDetail={handleShowPatternDetail}
+                />
 
 
-                {/* Consistent Learner Section (Quote) */}
-                <div className="mt-10"> 
-                    <ConsistentLearnerSection />
-                </div>
-                
-            </div>
+                {/* Consistent Learner Section (Quote) */}
+                <div className="mt-10"> 
+                    <ConsistentLearnerSection />
+                </div>
+                
+            </div>
 
-        </div>
-    );
+            {/* Modal Components */}
+            <ActiveTimeDetailModal 
+                isOpen={isTimeModalOpen}
+                onClose={() => setIsTimeModalOpen(false)}
+                data={timeModalData} 
+            />
+            
+            <LearningPatternDetailModal 
+                isOpen={isPatternModalOpen}
+                onClose={() => setIsPatternModalOpen(false)}
+                data={patternModalData} 
+            />
+
+            <ConsistencyDetailModal 
+                isOpen={isConsistencyModalOpen}
+                onClose={() => setIsConsistencyModalOpen(false)}
+                data={consistencyModalData} 
+            />
+
+        </div>
+    );
 }

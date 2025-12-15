@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowRightIcon, ClockIcon } from "lucide-react";
+import { ArrowRightIcon, ClockIcon, Lightbulb, TrendingUp } from "lucide-react";
 import { useAuth } from '../../contexts/AuthContext';
 import { insightsAPI } from '../../services/api'; 
 
@@ -33,6 +33,274 @@ export const CardContent = ({ className = "", children }) => (
         {children}
     </div>
 );
+
+// Modal Components
+const ModalCloseButton = ({ onClose }) => (
+    <button 
+        onClick={onClose} 
+        className="absolute top-4 right-4 text-white hover:text-gray-200 z-10"
+    >
+        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+    </button>
+);
+
+// 1. ActiveTimeDetailModal
+const ActiveTimeDetailModal = ({ isOpen, onClose, data }) => {
+    if (!isOpen || !data) return null;
+
+    const { 
+        activeTime,  
+        timeRange,  
+        description,
+        learnerType,
+    } = data;
+    
+    const label = "Most Active Time";
+    const defaultPlaceholderImage = "https://placehold.co/150x150/FFC107/000000?text=PRIME+TIME";
+
+    const getImageSource = (time) => {
+        const normalizedTime = time.toUpperCase().replace(/\s/g, '_');
+        switch (normalizedTime) {
+            case 'MORNING':
+                return "/images/most_active_time/morning_learner.png";
+            case 'AFTERNOON':
+                return "/images/most_active_time/afternoon_learner.png";
+            case 'LATE_NIGHT':
+            case 'NIGHT':
+                return "/images/most_active_time/late_night_warrior.png"; 
+            case 'EVENING':
+            default:
+                return "/images/most_active_time/evening_learner.png"; 
+        }
+    };
+    
+    const imageSource = getImageSource(activeTime);
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full p-0 overflow-hidden bg-white shadow-xl rounded-[32px] !border-0"> 
+                <CardHeader className="p-0">
+                    <div className="relative p-6 bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a]">
+                        <ModalCloseButton onClose={onClose} />
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <ClockIcon className="w-8 h-8 flex-shrink-0" />
+                            <h3 className="text-xl font-bold">{label}</h3>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="text-center mb-6">
+                        <p className="text-sm text-gray-700 italic mb-3">
+                            Setiap orang punya waktu emas untuk belajar. Dan waktu terbaikmu adalah....
+                        </p>
+                        <h4 className="text-2xl font-extrabold text-[#1a3a5a] mb-6">
+                            {activeTime?.toUpperCase() || 'MORNING'} {timeRange ? `(${timeRange})` : ''}
+                        </h4>
+                        
+                        <div className="w-full flex justify-center mb-6">
+                            <img 
+                                src={imageSource} 
+                                alt={`${learnerType} Illustration`}
+                                className="w-32 h-32 object-contain"
+                                onError={(e) => { e.target.onerror = null; e.target.src = defaultPlaceholderImage; }}
+                            />
+                        </div>
+
+                        <h5 className="text-xl font-bold text-gray-900 mb-3">
+                             {learnerType || 'Learner'} 
+                        </h5>
+                        <p className="text-sm text-gray-800 leading-relaxed mb-8"> 
+                            {description || 'Waktu terbaik untuk belajar adalah saat kamu merasa paling fokus dan produktif.'} 
+                        </p>
+                    </div>
+                    
+                    <div className="flex justify-center">
+                        <Button 
+                            onClick={onClose} 
+                            className="w-40 py-2 px-6 bg-[#1a3a5a] hover:bg-[#254C75] text-white text-base font-semibold"
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+// 2. LearningPatternDetailModal
+const LearningPatternDetailModal = ({ isOpen, onClose, data }) => {
+    if (!isOpen || !data) return null;
+
+    const { 
+        patternType,
+        description, 
+    } = data;
+    
+    const topLabel = "Learning Pattern"; 
+    const introText = "Setiap orang punya cara belajar yang berbeda. Pola yang paling mencerminkan gaya belajarmu adalah....";
+    const defaultPlaceholderImage = "https://placehold.co/150x150/50C878/FFFFFF?text=PATTERN";
+
+    const getImageSource = (type) => {
+        const normalizedType = type.toUpperCase().replace(/\s/g, '_');
+        
+        switch (normalizedType) {
+            case 'CONSISTENT_LEARNER':
+                return "/images/consistency_score/consistent_learner.png"; 
+            case 'FAST_LEARNER':
+                return "/images/consistency_score/fast_learner.png"; 
+            case 'REFLECTIVE_LEARNER':
+                return "/images/consistency_score/reflective_learner.png";
+            default:
+                return "/images/consistency_score/reflective_learner.png"; 
+        }
+    };
+    
+    const imagePath = getImageSource(patternType);
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full p-0 overflow-hidden bg-white shadow-xl rounded-[32px] !border-0">
+                <CardHeader className="p-0">
+                    <div className="relative p-6 bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a]"> 
+                        <ModalCloseButton onClose={onClose} />
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <Lightbulb className="w-8 h-8 flex-shrink-0" /> 
+                            <h3 className="text-xl font-bold">{topLabel}</h3>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="text-center mb-6">
+                        <p className="text-sm text-gray-700 italic mb-3">
+                            {introText}
+                        </p>
+                        
+                        <div className="w-full flex justify-center mb-6">
+                            <img 
+                                src={imagePath}
+                                alt={`${patternType} Illustration`}
+                                className="w-32 h-32 object-contain" 
+                                onError={(e) => { e.target.onerror = null; e.target.src = defaultPlaceholderImage; }}
+                            />
+                        </div>
+
+                        <h5 className="text-xl font-bold text-gray-900 mb-3">
+                            {patternType || 'Reflective Learner'}
+                        </h5>
+                        <p className="text-sm text-gray-800 leading-relaxed mb-8"> 
+                            {description || 'Pola belajar yang mencerminkan gaya belajarmu.'}
+                        </p>
+
+                    </div>
+                    
+                    <div className="flex justify-center mt-6">
+                        <Button 
+                            onClick={onClose} 
+                            className="w-40 py-2 px-6 bg-[#1a3a5a] hover:bg-[#254C75] text-white text-base font-semibold"
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
+
+// 3. ConsistencyDetailModal
+const ConsistencyDetailModal = ({ isOpen, onClose, data }) => {
+    if (!isOpen || !data) return null;
+
+    const { 
+        consistencyLevel, 
+        description,      
+        scoreValue        
+    } = data;
+    
+    const topLabel = "Detail Konsistensi"; 
+    const scoreText = "YOUR CONSISTENCY SCORE IS..."; 
+    const learnerType = "The Consistent Learner"; 
+    const introText = "Konsistensi adalah kunci kesuksesan belajar. Skor konsistensimu menunjukkan seberapa rutin kamu belajar.";
+    const defaultPlaceholderImage = "https://placehold.co/150x150/283e75/FFF?text=CONSISTENCY";
+    
+    const getImageSource = (level) => {
+        const normalizedLevel = level.toUpperCase();
+
+        switch (normalizedLevel) {
+            case 'LOW':
+                return "/images/learning_pattern/low_consistency.png"; 
+            case 'MEDIUM':
+                return "/images/learning_pattern/medium_consistency.png"; 
+            case 'HIGH':
+            default:
+                return "/images/learning_pattern/hight_consistency.png"; 
+        }
+    };
+    
+    const imagePath = getImageSource(consistencyLevel);
+    const statusLabel = consistencyLevel ? consistencyLevel.toUpperCase() + " Consistency" : "HIGH Consistency";
+
+    return (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/70 flex items-center justify-center p-4">
+            <Card className="max-w-md w-full p-0 overflow-hidden bg-white shadow-xl rounded-[32px] !border-none">
+                <CardHeader className="p-0">
+                    <div className="relative p-6 bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a]"> 
+                        <ModalCloseButton onClose={onClose} />
+                        <div className="flex items-center justify-center gap-4 text-white">
+                            <TrendingUp className="w-8 h-8 flex-shrink-0" />
+                            <h3 className="text-xl font-bold">{topLabel}</h3>
+                        </div>
+                    </div>
+                </CardHeader>
+                <CardContent className="p-6">
+                    <div className="text-center mb-2">
+                        <p className="text-sm text-gray-700 italic mb-3">
+                            {introText}
+                        </p>
+                        
+                        <h4 className="text-xl font-extrabold text-[#1a3a5a] mb-3"> 
+                            {scoreText.toUpperCase()}
+                        </h4>
+                        
+                        <p className="text-3xl font-bold text-[#283e75] mb-4">
+                            {statusLabel} {scoreValue !== undefined ? `(${scoreValue}%)` : ''}
+                        </p>
+
+                        <div className="w-full flex justify-center mb-3">
+                            <img 
+                                src={imagePath} 
+                                alt={`${statusLabel} Illustration`}
+                                className="w-32 h-32 object-contain" 
+                                onError={(e) => { e.target.onerror = null; e.target.src = defaultPlaceholderImage; }}
+                            />
+                        </div>
+
+                        <h5 className="text-xl font-bold text-gray-900 mb-3">
+                            {learnerType}
+                        </h5>
+                    
+                        <p className="text-sm text-gray-800 leading-relaxed mb-8">
+                            {description || 'Konsistensi adalah kunci untuk mencapai tujuan belajarmu.'} 
+                        </p>
+
+                    </div>
+                
+                    <div className="flex justify-center mt-6">
+                        <Button 
+                            onClick={onClose} 
+                            className="w-40 py-2 px-6 bg-[#1a3a5a] hover:bg-[#254C75] text-white text-base font-semibold"
+                        >
+                            Tutup
+                        </Button>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+};
 
 const Button = ({ className = "", children, onClick, variant = 'primary' }) => {
     let baseClasses = `inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors 
@@ -68,7 +336,8 @@ const Button = ({ className = "", children, onClick, variant = 'primary' }) => {
 //   - score: consistencyScore dari backend insights API (insightsData.consistencyScore)
 //   - insight: description dari backend insights API (calculated based on score)
 //   - insightText: insights text dari backend insights API (insightsData.insights)
-const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!' }) => {
+//   - onShowDetail: handler untuk membuka modal detail
+const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!', onShowDetail }) => {
     // score berasal dari backend: insightsData.consistencyScore
     // Pastikan score adalah number dan dalam range 0-100
     const numericScore = typeof score === 'number' ? score : parseFloat(score || 0);
@@ -139,11 +408,25 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
                                 Pelajari lebih lanjut tips dan trik untuk mempertahankan momentum belajarmu!
                             </p>
 
-                            <Button className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-8 lg:h-10 px-6 gap-1"> 
-                                <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]"> 
-                                    SELENGKAPNYA
-                                </span>
-                            </Button>
+                            <Button 
+                                onClick={() => {
+                                    // Determine consistency level
+                                    let level = 'HIGH';
+                                    if (normalizedScore < 40) level = 'LOW';
+                                    else if (normalizedScore < 60) level = 'MEDIUM';
+                                    
+                                    onShowDetail?.({
+                                        consistencyLevel: level,
+                                        description: insight,
+                                        scoreValue: normalizedScore
+                                    });
+                                }}
+                                className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-8 lg:h-10 px-6 gap-1"
+                            > 
+                                <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]">
+                                    SELENGKAPNYA
+                                </span>
+                            </Button>
                         </div>
                     </div>
                     
@@ -155,7 +438,7 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
 
 
 // 2. MostActiveTimeSection 
-const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fokus terbaikmu!' }) => {
+const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fokus terbaikmu!', onShowDetail, mostActiveTimeData = null }) => {
     
     const mapTimeToColor = (data) => {
         return data.map(time => {
@@ -256,7 +539,23 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
                                         dangerouslySetInnerHTML={{ __html: finalInsight }}
                                     />
                                             
-                                    <Button className="bg-[#283e75] hover:bg-[#283e75]/90 rounded-full h-8 lg:h-10 px-6 lg:px-8 gap-1">
+                                    <Button 
+                                        onClick={() => {
+                                            const mostActive = coloredTimeData.reduce((prev, current) => 
+                                                (prev.fillPercentage > current.fillPercentage) ? prev : current
+                                            );
+                                            
+                                            const labelParts = mostActive.label.match(/(.*)\s\((.*)\)/) || [null, mostActive.label, 'N/A'];
+                                            
+                                            onShowDetail?.({
+                                                activeTime: labelParts[1]?.trim() || mostActive.label.split('(')[0].trim() || 'Morning',
+                                                timeRange: labelParts[2]?.replace(')', '').trim() || '06:00-11:59',
+                                                description: mostActive.description || mostActiveTimeData?.detailDescription || 'Waktu terbaik untuk belajar adalah saat kamu merasa paling fokus dan produktif.',
+                                                learnerType: mostActive.learnerType || mostActiveTimeData?.learnerType || 'Learner'
+                                            });
+                                        }}
+                                        className="bg-[#283e75] hover:bg-[#283e75]/90 rounded-full h-8 lg:h-10 px-6 lg:px-8 gap-1"
+                                    >
                                         <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]">
                                             SELENGKAPNYA
                                         </span>
@@ -288,7 +587,7 @@ const generateConicGradient = (data) => {
 };
 
 
-const LearningPatternSection = ({ learningPatternData = [], mainPattern = { label: "N/A" }, description = 'Pola belajar belum terdeteksi.' }) => {
+const LearningPatternSection = ({ learningPatternData = [], mainPattern = { label: "N/A" }, description = 'Pola belajar belum terdeteksi.', onShowDetail }) => {
     
     // Fallback jika data kosong
     const dataToDisplay = learningPatternData.length > 0 ? learningPatternData : [
@@ -351,11 +650,19 @@ const LearningPatternSection = ({ learningPatternData = [], mainPattern = { labe
                     {description}
                 </p>
                     
-                <Button className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-9 px-7 gap-1.5">
-                    <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-sm lg:text-base tracking-[0] leading-[normal]">
-                        SELENGKAPNYA
-                    </span>
-                </Button>
+                <Button 
+                    onClick={() => {
+                        onShowDetail?.({
+                            patternType: mainPattern.label || 'Reflective Learner',
+                            description: description
+                        });
+                    }}
+                    className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-9 px-7 gap-1.5"
+                >
+                    <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-sm lg:text-base tracking-[0] leading-[normal]">
+                        SELENGKAPNYA
+                    </span>
+                </Button>
             </div>
         </section>
     );
@@ -457,12 +764,30 @@ const transformInsightsData = (insightsData, user) => {
     
     const timeInfo = timeMap[mostActiveTime] || timeMap['morning'];
     
+    // Learner type mapping
+    const learnerTypeMap = {
+        'morning': 'Morning Learner',
+        'afternoon': 'Afternoon Learner',
+        'evening': 'Evening Learner',
+        'night': 'Night Learner',
+        'late_night': 'Late Night Warrior'
+    };
+    
+    // Description mapping
+    const descriptionMap = {
+        'morning': 'Kamu adalah Morning Learner! Waktu pagi adalah waktu emasmu untuk belajar. Otakmu paling fresh dan siap menerima informasi baru di pagi hari. Manfaatkan waktu ini untuk materi yang paling menantang!',
+        'afternoon': 'Kamu adalah Afternoon Learner! Waktu siang adalah waktu terbaikmu untuk belajar. Setelah aktivitas pagi, otakmu sudah siap untuk fokus dan menyerap informasi. Gunakan waktu ini untuk mengkonsolidasi pengetahuanmu!',
+        'evening': 'Kamu adalah Evening Learner! Waktu malam adalah waktu produktifmu. Setelah seharian beraktivitas, kamu bisa fokus dan berkonsentrasi dengan baik di malam hari. Manfaatkan waktu ini untuk review dan pemahaman mendalam!',
+        'night': 'Kamu adalah Night Learner! Waktu malam hingga dini hari adalah waktu terbaikmu. Kamu bisa fokus dengan baik di malam hari dan menyerap informasi dengan efektif. Gunakan waktu ini untuk belajar intensif!',
+        'late_night': 'Kamu adalah Late Night Warrior! Waktu larut malam adalah waktu emasmu untuk belajar. Kamu bisa fokus dengan baik di malam hari dan menyerap informasi dengan efektif. Manfaatkan waktu ini untuk belajar intensif!'
+    };
+    
     // Create time distribution data
     const timeData = [
-        { label: 'Morning (06:00-11:59)', fillPercentage: 0, color: 'bg-amber-400' },
-        { label: 'Afternoon (12:00-17:59)', fillPercentage: 0, color: 'bg-blue-400' },
-        { label: 'Evening (18:00-23:59)', fillPercentage: 0, color: 'bg-indigo-700' },
-        { label: 'Night (00:00-05:59)', fillPercentage: 0, color: 'bg-indigo-700' }
+        { label: 'Morning (06:00-11:59)', fillPercentage: 0, color: 'bg-amber-400', description: descriptionMap['morning'], learnerType: learnerTypeMap['morning'] },
+        { label: 'Afternoon (12:00-17:59)', fillPercentage: 0, color: 'bg-blue-400', description: descriptionMap['afternoon'], learnerType: learnerTypeMap['afternoon'] },
+        { label: 'Evening (18:00-23:59)', fillPercentage: 0, color: 'bg-indigo-700', description: descriptionMap['evening'], learnerType: learnerTypeMap['evening'] },
+        { label: 'Night (00:00-05:59)', fillPercentage: 0, color: 'bg-indigo-700', description: descriptionMap['night'], learnerType: learnerTypeMap['night'] }
     ];
     
     // Set active time to 80%, distribute remaining to others
@@ -526,7 +851,11 @@ const transformInsightsData = (insightsData, user) => {
         insight_text: insightsData.insights || 'Belum ada insight tersedia.',
         most_active_time: {
             data: timeData,
-            description: `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}. Kamu memiliki tingkat aktivitas 80% di waktu ini. Manfaatkan waktu ini untuk materi yang paling menantang!`
+            description: `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}. Kamu memiliki tingkat aktivitas 80% di waktu ini. Manfaatkan waktu ini untuk materi yang paling menantang!`,
+            activeTime: timeInfo.label.split('(')[0].trim(),
+            timeRange: timeInfo.label.match(/\(([^)]+)\)/)?.[1] || '06:00-11:59',
+            learnerType: learnerTypeMap[mostActiveTime] || learnerTypeMap['morning'],
+            detailDescription: descriptionMap[mostActiveTime] || descriptionMap['morning']
         },
         // learning_pattern dari model ML (backend)
         learning_pattern: {
@@ -548,6 +877,30 @@ export function Frame({ onGoBack, userData = {} }) {
     const [insightsData, setInsightsData] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+
+    // State untuk Modal
+    const [isTimeModalOpen, setIsTimeModalOpen] = useState(false);
+    const [timeModalData, setTimeModalData] = useState(null);
+    const [isPatternModalOpen, setIsPatternModalOpen] = useState(false);
+    const [patternModalData, setPatternModalData] = useState(null);
+    const [isConsistencyModalOpen, setIsConsistencyModalOpen] = useState(false);
+    const [consistencyModalData, setConsistencyModalData] = useState(null);
+
+    // Handler untuk membuka modal
+    const handleShowTimeDetail = (data) => {
+        setTimeModalData(data);
+        setIsTimeModalOpen(true);
+    };
+
+    const handleShowPatternDetail = (data) => {
+        setPatternModalData(data);
+        setIsPatternModalOpen(true);
+    };
+
+    const handleShowConsistencyDetail = (data) => {
+        setConsistencyModalData(data);
+        setIsConsistencyModalOpen(true);
+    };
 
     const imagePath = "https://placehold.co/100x100/1a3a5a/FFF1DF?text=G"; 
     const G_Logo = imagePath;
@@ -805,6 +1158,8 @@ export function Frame({ onGoBack, userData = {} }) {
                 <MostActiveTimeSection 
                     timeData={finalUserData.most_active_time?.data}
                     insightText={finalUserData.most_active_time?.description}
+                    onShowDetail={handleShowTimeDetail}
+                    mostActiveTimeData={finalUserData.most_active_time}
                 />
 
                 {/* Consistency Score Section */}
@@ -816,6 +1171,7 @@ export function Frame({ onGoBack, userData = {} }) {
                                     score={finalUserData.consistency_score || 0}
                                     insight={finalUserData.consistency?.description}
                                     insightText={finalUserData.insight_text}
+                                    onShowDetail={handleShowConsistencyDetail}
                                 />
                             </div>
                         </div>
@@ -830,19 +1186,39 @@ export function Frame({ onGoBack, userData = {} }) {
                                 learningPatternData={learningPatternData}
                                 mainPattern={mainPattern}
                                 description={finalUserData.learning_pattern?.description}
+                                onShowDetail={handleShowPatternDetail}
                             />
                         </div>
                     </CardContent>
                 </Card>
 
 
-                {/* Consistent Learner Section (Quote) */}
-                <div className="mt-10"> 
-                    <ConsistentLearnerSection />
-                </div>
-                
-            </div>
+                {/* Consistent Learner Section (Quote) */}
+                <div className="mt-10"> 
+                    <ConsistentLearnerSection />
+                </div>
+                
+            </div>
 
-        </div>
-    );
+            {/* Modal Components */}
+            <ActiveTimeDetailModal 
+                isOpen={isTimeModalOpen}
+                onClose={() => setIsTimeModalOpen(false)}
+                data={timeModalData}
+            />
+            
+            <LearningPatternDetailModal 
+                isOpen={isPatternModalOpen}
+                onClose={() => setIsPatternModalOpen(false)}
+                data={patternModalData}
+            />
+
+            <ConsistencyDetailModal 
+                isOpen={isConsistencyModalOpen}
+                onClose={() => setIsConsistencyModalOpen(false)}
+                data={consistencyModalData}
+            />
+
+        </div>
+    );
 }

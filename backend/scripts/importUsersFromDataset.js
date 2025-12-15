@@ -6,6 +6,8 @@ const connectDB = require('../src/config/database');
 const User = require('../src/models/User');
 
 // Path to dataset CSV
+// NOTE: If DATA SPECIALIST folder is not available, you need to provide the CSV file path manually
+// The CSV file should be placed in the project root or update this path accordingly
 const CSV_PATH = path.join(__dirname, '../../DATA SPECIALIST/01_basic_user_summary_clean.csv');
 
 // Default password for all users (can be changed)

@@ -27,3 +27,6 @@ frontend/build/
 backend/tests/
 backend/docs/
 frontend/docs/
+
+# Documentation (organized in docs folder)
+docs/

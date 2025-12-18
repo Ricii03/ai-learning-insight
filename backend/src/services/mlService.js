@@ -7,13 +7,14 @@ const scriptPath = path.join(__dirname, '../../model_dev/predict.py');
 
 console.log('[mlService] Python path:', pythonPath);
 console.log('[mlService] Script path:', scriptPath);
-console.log('[mlService] Python exists:', fs.existsSync(pythonPath) ? 'Connect' : 'Error');
-console.log('[mlService] Script exists:', fs.existsSync(scriptPath) ? 'Connect' : 'Error');
 
 async function callPython(activities) {
   return new Promise((resolve, reject) => {
-    if (!fs.existsSync(pythonPath)) {
-      console.error('[mlService] Python not found at:', pythonPath);
+    // Check if pythonPath is a command (like 'python3') or a direct path
+    const isCommand = !pythonPath.includes('/') && !pythonPath.includes('\\');
+    
+    if (!isCommand && !fs.existsSync(pythonPath)) {
+      console.error('[mlService] Python executable not found at path:', pythonPath);
       return reject(new Error(`Python not found at: ${pythonPath}`));
     }
     
@@ -23,7 +24,7 @@ async function callPython(activities) {
     }
 
     const inputData = JSON.stringify({ activities });
-    console.log(`[mlService] Calling Python with ${activities.length} activities`);
+    console.log(`[mlService] Calling Python (${pythonPath}) with ${activities.length} activities`);
     
     const pythonProcess = spawn(pythonPath, [scriptPath, inputData]);
     
@@ -69,7 +70,6 @@ async function generateInsights(activities) {
   console.log('[mlService] generateInsights called with', activities?.length || 0, 'activities');
   
   if (!activities || activities.length === 0) {
-    console.log('[mlService] No activities, returning default insights');
     return {
       mostActiveTime: 'morning',
       consistencyScore: 0,
@@ -87,16 +87,7 @@ async function generateInsights(activities) {
     const formattedActivities = activities.map(activity => {
       const activityObj = activity.toObject ? activity.toObject() : activity;
       
-      let dateString;
-      if (typeof activityObj.date === 'string') {
-        dateString = activityObj.date;
-      } else if (activityObj.date instanceof Date) {
-        dateString = activityObj.date.toISOString();
-      } else if (activityObj.date && typeof activityObj.date.toISOString === 'function') {
-        dateString = activityObj.date.toISOString();
-      } else {
-        dateString = new Date(activityObj.date).toISOString();
-      }
+      let dateString = activityObj.date instanceof Date ? activityObj.date.toISOString() : new Date(activityObj.date).toISOString();
       
       return {
         date: dateString,
@@ -109,13 +100,7 @@ async function generateInsights(activities) {
       };
     });
 
-    console.log('[mlService] Formatted', formattedActivities.length, 'activities');
-    if (formattedActivities.length > 0) {
-      console.log('[mlService] Sample activity:', JSON.stringify(formattedActivities[0]));
-    }
-
     const result = await callPython(formattedActivities);
-    console.log('[mlService] Insights generated successfully');
     return result;
     
   } catch (error) {

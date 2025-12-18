@@ -455,11 +455,11 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
     };
 
     const coloredTimeData = mapTimeToColor(timeData);
-
+    const hasActualData = coloredTimeData.some(time => time.fillPercentage > 0);
 
     // insight yang mengandung persentase 
     const getActiveTimeInsight = (data, baseInsight) => {
-        if (!data || data.length === 0) return 'Data waktu aktif belum tersedia. Mulai belajar untuk melihat polanya!';
+        if (!hasActualData) return 'Belum ada data waktu produktif yang terekam.';
         
         const mostActive = data.reduce((prev, current) => 
           (prev.fillPercentage > current.fillPercentage) ? prev : current
@@ -497,15 +497,12 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
                         
                         <Card className="bg-[#fff6f6] rounded-xl lg:rounded-[58px] shadow-lg border-0 mb-4 lg:mb-6">
                             <CardContent className="p-3 lg:p-4">
-                                <div className="relative h-32 lg:h-40 flex items-end justify-around"> 
-                                    
+                                <div className="relative h-32 lg:h-40 w-full flex items-end justify-around"> 
                                     {coloredTimeData.map((time, index) => ( 
                                         <div
                                             key={index}
                                             className="flex flex-col items-center gap-1 w-1/4 max-w-[80px] h-full"
                                         >
-                                            
-                                            {/* Bar Grafik Dinamis - Kontainer Utama Bar */}
                                             <div className="w-full h-full border border-solid border-black/30 rounded-lg shadow-inner relative overflow-hidden bg-gray-200/50">
                                                 <div 
                                                     className={`absolute bottom-0 w-full ${time.color} transition-all duration-500 hover:opacity-80`}
@@ -513,8 +510,6 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
                                                 >
                                                 </div>
                                             </div>
-                                                
-                                            {/* Label Waktu */}
                                             <span className="font-['Open_Sans',Helvetica] font-normal text-xs lg:text-sm text-black tracking-[0] leading-[normal] text-center">
                                                 {time.label.split('(')[0].trim()}
                                             </span>
@@ -532,28 +527,30 @@ const MostActiveTimeSection = ({ timeData = [], insightText = 'Optimalkan jam fo
                                         className="font-['Inter',Helvetica] font-normal text-xs lg:text-base text-black tracking-[0] leading-normal mb-3 lg:mb-4"
                                         dangerouslySetInnerHTML={{ __html: finalInsight }}
                                     />
-                                            
-                                    <Button 
-                                        onClick={() => {
-                                            const mostActive = coloredTimeData.reduce((prev, current) => 
-                                                (prev.fillPercentage > current.fillPercentage) ? prev : current
-                                            );
-                                            
-                                            const labelParts = mostActive.label.match(/(.*)\s\((.*)\)/) || [null, mostActive.label, 'N/A'];
-                                            
-                                            onShowDetail?.({
-                                                activeTime: labelParts[1]?.trim() || mostActive.label.split('(')[0].trim() || 'Morning',
-                                                timeRange: labelParts[2]?.replace(')', '').trim() || '06:00-11:59',
-                                                description: mostActive.description || mostActiveTimeData?.detailDescription || 'Waktu terbaik untuk belajar adalah saat kamu merasa paling fokus dan produktif.',
-                                                learnerType: mostActive.learnerType || mostActiveTimeData?.learnerType || 'Learner'
-                                            });
-                                        }}
-                                        className="bg-[#283e75] hover:bg-[#283e75]/90 rounded-full h-8 lg:h-10 px-6 lg:px-8 gap-1"
-                                    >
-                                        <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]">
-                                            SELENGKAPNYA
-                                        </span>
-                                    </Button>
+                                    
+                                    {hasActualData && (
+                                        <Button 
+                                            onClick={() => {
+                                                const mostActive = coloredTimeData.reduce((prev, current) => 
+                                                    (prev.fillPercentage > current.fillPercentage) ? prev : current
+                                                );
+                                                
+                                                const labelParts = mostActive.label.match(/(.*)\s\((.*)\)/) || [null, mostActive.label, 'N/A'];
+                                                
+                                                onShowDetail?.({
+                                                    activeTime: labelParts[1]?.trim() || mostActive.label.split('(')[0].trim() || 'Morning',
+                                                    timeRange: labelParts[2]?.replace(')', '').trim() || '06:00-11:59',
+                                                    description: mostActive.description || mostActiveTimeData?.detailDescription || 'Waktu terbaik untuk belajar adalah saat kamu merasa paling fokus dan produktif.',
+                                                    learnerType: mostActive.learnerType || mostActiveTimeData?.learnerType || 'Learner'
+                                                });
+                                            }}
+                                            className="bg-[#283e75] hover:bg-[#283e75]/90 rounded-full h-8 lg:h-10 px-6 lg:px-8 gap-1"
+                                        >
+                                            <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-xs lg:text-sm tracking-[0] leading-[normal]">
+                                                SELENGKAPNYA
+                                            </span>
+                                        </Button>
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>
@@ -582,84 +579,87 @@ const generateConicGradient = (data) => {
 
 
 const LearningPatternSection = ({ learningPatternData = [], mainPattern = { label: "N/A" }, description = 'Pola belajar belum terdeteksi.', onShowDetail }) => {
-    
-    // Fallback jika data kosong
-    const dataToDisplay = learningPatternData.length > 0 ? learningPatternData : [
-        { label: "Data not available", percentage: 100, color: "#ccc" }
-    ];
+    
+    // Fallback jika data kosong
+    const dataToDisplay = learningPatternData.length > 0 ? learningPatternData : [
+        { label: "Data not available", percentage: 0, color: "#ccc" }
+    ];
 
-    const pieChartStyle = {
-        background: generateConicGradient(dataToDisplay),
-    };
+    const hasActualData = dataToDisplay.some(item => item.percentage > 0);
 
-    return (
-        <section className="w-full py-8 px-6">
-            
-            <div className="mb-8 text-left">
-                <h2 className="font-['Inter',Helvetica] font-bold text-2xl text-black mb-1.5">
-                    Learning Pattern
-                </h2>
-                <p className="font-['Open_Sans',Helvetica] font-normal text-base text-black/70">
-                    Temukan kategori yang mencerminkan caramu belajar.
-                </p>
-            </div>
-                
-            <div className="flex flex-col lg:flex-row items-center gap-10 mb-8">
-                <div className="flex items-center gap-6 w-fit lg:w-auto">
-                    <div className="flex-shrink-0 relative w-32 h-32 rounded-full overflow-hidden shadow-xl">
-                        <div
-                            className="w-full h-full"
-                            style={pieChartStyle}
-                        >
-                        </div>
-                    </div>
-                    <div className="flex flex-col space-y-3 w-max"> 
-                        {dataToDisplay.map((item, index) => (
-                            <div key={index} className="flex items-center gap-2">
-                                <span 
-                                    className="w-4 h-4 rounded-sm flex-shrink-0"
-                                    style={{ backgroundColor: item.color }}
-                                ></span>
-                                {/* Label */}
-                                <span className="font-['Open_Sans',Helvetica] font-medium text-sm lg:text-base text-black/90 whitespace-nowrap">
-                                    {item.label} {item.percentage !== undefined ? `(${item.percentage}%)` : ''}
-                                </span>
-                            </div>
-                        ))}
-                    </div>
-                </div>
+    const pieChartStyle = {
+        background: !hasActualData ? '#e0e0e0' : generateConicGradient(dataToDisplay),
+    };
 
-                {/* Pola Belajar Utama */}
-                <div className="text-center w-full lg:text-left lg:w-auto flex-shrink-0">
-                    <p className="font-['Inter',Helvetica] font-semibold text-base text-black/70 mb-1">Pola Belajar Utama:</p>
-                    <h3 className="font-['Inter',Helvetica] font-bold text-2xl text-[#0d1c31]">
-                        {mainPattern.label}
-                    </h3>
-                </div>
-            </div>
-                
-            {/* Ringkasan & Tombol */}
-            <div className="relative pt-6 text-center border-t border-black/10"> 
-                <p className="font-['Inter',Helvetica] font-normal text-sm lg:text-base text-black/80 tracking-[0] leading-normal mb-6 max-w-2xl mx-auto">
-                    {description}
-                </p>
-                    
-                <Button 
-                    onClick={() => {
-                        onShowDetail?.({
-                            patternType: mainPattern.label || 'Reflective Learner',
-                            description: description
-                        });
-                    }}
-                    className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-9 px-7 gap-1.5"
-                >
-                    <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-sm lg:text-base tracking-[0] leading-[normal]">
-                        SELENGKAPNYA
-                    </span>
-                </Button>
-            </div>
-        </section>
-    );
+    return (
+        <section className="w-full py-8 px-6">
+            
+            <div className="mb-8 text-left">
+                <h2 className="font-['Inter',Helvetica] font-bold text-2xl text-black mb-1.5">
+                    Learning Pattern
+                </h2>
+                <p className="font-['Open_Sans',Helvetica] font-normal text-base text-black/70">
+                    Temukan kategori yang mencerminkan caramu belajar.
+                </p>
+            </div>
+                
+            <div className="flex flex-col lg:flex-row items-center gap-10 mb-8">
+                <div className="flex items-center gap-6 w-fit lg:w-auto">
+                    <div className="flex-shrink-0 relative w-32 h-32 rounded-full overflow-hidden shadow-xl flex items-center justify-center bg-gray-100">
+                        <div
+                            className="w-full h-full"
+                            style={pieChartStyle}
+                        >
+                        </div>
+                    </div>
+                    <div className="flex flex-col space-y-3 w-max"> 
+                        {dataToDisplay.map((item, index) => (
+                            <div key={index} className="flex items-center gap-2">
+                                <span 
+                                    className="w-4 h-4 rounded-sm flex-shrink-0"
+                                    style={{ backgroundColor: item.color }}
+                                ></span>
+                                <span className="font-['Open_Sans',Helvetica] font-medium text-sm lg:text-base text-black/90 whitespace-nowrap">
+                                    {item.label} {item.percentage !== undefined ? `(${item.percentage}%)` : ''}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Pola Belajar Utama */}
+                <div className="text-center w-full lg:text-left lg:w-auto flex-shrink-0">
+                    <p className="font-['Inter',Helvetica] font-semibold text-base text-black/70 mb-1">Pola Belajar Utama:</p>
+                    <h3 className="font-['Inter',Helvetica] font-bold text-2xl text-[#0d1c31]">
+                        {hasActualData ? mainPattern.label : '-'}
+                    </h3>
+                </div>
+            </div>
+                
+            {/* Ringkasan & Tombol */}
+            <div className="relative pt-6 text-center border-t border-black/10"> 
+                <p className="font-['Inter',Helvetica] font-normal text-sm lg:text-base text-black/80 tracking-[0] leading-normal mb-6 max-w-2xl mx-auto">
+                    {hasActualData ? description : 'Mulai aktivitas belajarmu untuk melihat analisis pola belajarmu di sini.'}
+                </p>
+                    
+                {hasActualData && (
+                    <Button 
+                        onClick={() => {
+                            onShowDetail?.({
+                                patternType: mainPattern.label || 'Reflective Learner',
+                                description: description
+                            });
+                        }}
+                        className="bg-[#283e75] hover:bg-[#1f3160] rounded-full h-9 px-7 gap-1.5"
+                    >
+                        <span className="font-['Open_Sans',Helvetica] font-normal text-[#fff6f6] text-sm lg:text-base tracking-[0] leading-[normal]">
+                            SELENGKAPNYA
+                        </span>
+                    </Button>
+                )}
+            </div>
+        </section>
+    );
 };
 
 
@@ -724,12 +724,13 @@ const getMainPattern = (data) => {
 
 // Transform backend data to frontend format
 const transformInsightsData = (insightsData, user) => {
-    // If no insights data, return null (will show empty state)
-    if (!insightsData) {
-        return null;
-    }
+    // Selalu proses data, jika tidak ada insightsData maka gunakan default object kosong
+    const data = insightsData || {};
+    
+    // hasData dianggap benar jika ada aktivitas nyata ATAU ada data dari JSON
+    const hasData = (data.totalActivities > 0) || (data.consistencyScore > 0) || !!data.jsonInsight;
 
-    const jsonInsight = insightsData.jsonInsight;
+    const jsonInsight = data.jsonInsight;
 
     // Map mostActiveTime to time distribution
     const timeMap = {
@@ -740,7 +741,7 @@ const transformInsightsData = (insightsData, user) => {
     };
 
     // 1. Most Active Time - Prioritize JSON
-    let mostActiveTime = (insightsData.mostActiveTime || 'morning').toLowerCase();
+    let mostActiveTime = (data.mostActiveTime || 'morning').toLowerCase();
     if (jsonInsight && jsonInsight.most_active_time) {
         mostActiveTime = jsonInsight.most_active_time.period.toLowerCase();
     }
@@ -749,8 +750,8 @@ const transformInsightsData = (insightsData, user) => {
 
     // 2. Consistency Score - Prioritize matching JSON Category
     let consistencyScore = 0;
-    if (insightsData.consistencyScore !== undefined && insightsData.consistencyScore !== null) {
-        const parsedScore = Number(insightsData.consistencyScore);
+    if (data.consistencyScore !== undefined && data.consistencyScore !== null) {
+        const parsedScore = Number(data.consistencyScore);
         if (!isNaN(parsedScore)) {
             consistencyScore = parsedScore;
         }
@@ -761,12 +762,12 @@ const transformInsightsData = (insightsData, user) => {
     }
     
     // 3. Learning Pattern - Prioritize JSON
-    let learningPattern = insightsData.learningPattern || 'Reflective Learner';
+    let learningPattern = data.learningPattern || 'Reflective Learner';
     if (jsonInsight && jsonInsight.learning_pattern) {
         learningPattern = jsonInsight.learning_pattern.name;
     }
 
-    console.log('[transformInsightsData] Data Source:', jsonInsight ? 'user_insights.json' : 'ML Model');
+    console.log('[transformInsightsData] Data Source:', jsonInsight ? 'user_insights.json' : (hasData ? 'ML Model' : 'Default/No Data'));
     console.log('[transformInsightsData] - consistencyScore:', consistencyScore);
     console.log('[transformInsightsData] - learningPattern:', learningPattern);
     console.log('[transformInsightsData] - mostActiveTime:', mostActiveTime);
@@ -801,21 +802,21 @@ const transformInsightsData = (insightsData, user) => {
     let activeTimeDesc = descriptionMap[mostActiveTime] || descriptionMap['morning'];
     let activeLearnerType = learnerTypeMap[mostActiveTime] || learnerTypeMap['morning'];
     
-    if (insightsData.jsonInsight && insightsData.jsonInsight.most_active_time) {
-        const jsonPeriod = insightsData.jsonInsight.most_active_time.period.toLowerCase();
+    if (data.jsonInsight && data.jsonInsight.most_active_time) {
+        const jsonPeriod = data.jsonInsight.most_active_time.period.toLowerCase();
         if (jsonPeriod === mostActiveTime.toLowerCase()) {
-            activeTimeDesc = insightsData.jsonInsight.most_active_time.description;
-            activeLearnerType = insightsData.jsonInsight.most_active_time.period_name;
+            activeTimeDesc = data.jsonInsight.most_active_time.description;
+            activeLearnerType = data.jsonInsight.most_active_time.period_name;
             console.log('[transformInsightsData] Using most active time description from user_insights.json');
         }
     }
     
-    // Set active time to 80%, distribute remaining to others
-    timeData[timeInfo.index].fillPercentage = 80;
+    // Set active time to 80% if data exists, otherwise 0
+    if (hasData) {
+        timeData[timeInfo.index].fillPercentage = 80;
+    }
     timeData[timeInfo.index].description = activeTimeDesc;
     timeData[timeInfo.index].learnerType = activeLearnerType;
-
-    // If insights data exists, use it (timeData already created above)
 
     // Learning Pattern Details
     const patternMap = {
@@ -840,17 +841,20 @@ const transformInsightsData = (insightsData, user) => {
     const otherPatterns = allPatterns.filter(p => p !== learningPattern);
     
     const learningPatternData = [
-        { label: learningPattern, percentage: 60, color: patternInfo.color },
-        { label: otherPatterns[0], percentage: 25, color: patternMap[otherPatterns[0]].color },
-        { label: otherPatterns[1], percentage: 15, color: patternMap[otherPatterns[1]].color }
+        { label: learningPattern, percentage: hasData ? 60 : 0, color: patternInfo.color },
+        { label: otherPatterns[0], percentage: hasData ? 25 : 0, color: patternMap[otherPatterns[0]].color },
+        { label: otherPatterns[1], percentage: hasData ? 15 : 0, color: patternMap[otherPatterns[1]].color }
     ];
 
     // Consistency details
     let consistencyDesc = 'Ayo tingkatkan konsistensi belajarmu!';
-    let consistencyLevel = 'HIGH';
-    if (consistencyScore >= 80) consistencyLevel = 'HIGH';
-    else if (consistencyScore >= 40) consistencyLevel = 'MEDIUM';
-    else consistencyLevel = 'LOW';
+    let consistencyLevel = 'LOW';
+    
+    if (hasData) {
+        if (consistencyScore >= 80) consistencyLevel = 'HIGH';
+        else if (consistencyScore >= 40) consistencyLevel = 'MEDIUM';
+        else consistencyLevel = 'LOW';
+    }
 
     if (jsonInsight && jsonInsight.consistency) {
         // Ambil deskripsi persis dari user_insights.json
@@ -866,9 +870,11 @@ const transformInsightsData = (insightsData, user) => {
     }
 
     // Generate insight summary text based on JSON if available
-    let insightSummaryText = insightsData.insights || 'Belum ada insight tersedia.';
+    let insightSummaryText = data.insights || 'Belum ada insight tersedia.';
     if (jsonInsight) {
         insightSummaryText = `Berdasarkan data kamu, kamu memiliki ${jsonInsight.consistency.category}. Konsistensi skor kamu adalah ${consistencyScore.toFixed(1)}%.`;
+    } else if (!hasData) {
+        insightSummaryText = 'Belum ada data aktivitas untuk dianalisis. Skor konsistensimu adalah 0%.';
     }
 
     return {
@@ -879,7 +885,7 @@ const transformInsightsData = (insightsData, user) => {
         insight_text: insightSummaryText,
         most_active_time: {
             data: timeData,
-            description: `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}.`,
+            description: hasData ? `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}.` : 'Belum ada data waktu produktif.',
             activeTime: timeInfo.label.split('(')[0].trim(),
             timeRange: timeInfo.label.match(/\(([^)]+)\)/)?.[1] || '06:00-11:59',
             learnerType: activeLearnerType,
@@ -887,7 +893,7 @@ const transformInsightsData = (insightsData, user) => {
         },
         learning_pattern: {
             data: learningPatternData,
-            description: patternInfo.description,
+            description: hasData ? patternInfo.description : 'Belum ada data pola belajar.',
             mlPattern: learningPattern
         },
         consistency: {
@@ -1004,69 +1010,6 @@ export function Frame({ onGoBack, userData = {} }) {
 
     // Transform data dari backend insights
     const transformedData = transformInsightsData(insightsData, user);
-    
-    // Jika tidak ada data dari backend, tampilkan empty state
-    if (!transformedData) {
-        return (
-            <div className="bg-[#FFF1DF] min-h-screen font-sans">
-                <div className="bg-gradient-to-br from-[#0d1c31] to-[#1a3a5a] px-6 py-10 relative overflow-hidden">
-                    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                        <button 
-                            onClick={onGoBack} 
-                            className="mb-6 flex items-center text-white/90 hover:text-white transition text-sm"
-                        >
-                            <svg 
-                                xmlns="http://www.w3.org/2000/svg" 
-                                className="h-5 w-5 mr-1" 
-                                fill="none" 
-                                viewBox="0 0 24 24" 
-                                stroke="currentColor" 
-                                strokeWidth={2}
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                            </svg>
-                            Kembali ke Dashboard
-                        </button>
-                    </div>
-                </div>
-
-                <div className="max-w-7xl mx-auto px-6 py-8">
-                    <div className="bg-white rounded-2xl shadow-lg p-12 text-center">
-                        <div className="max-w-md mx-auto">
-                            <div className="w-24 h-24 mx-auto mb-6 bg-gray-100 rounded-full flex items-center justify-center">
-                                <svg 
-                                    className="w-12 h-12 text-gray-400" 
-                                    fill="none" 
-                                    stroke="currentColor" 
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path 
-                                        strokeLinecap="round" 
-                                        strokeLinejoin="round" 
-                                        strokeWidth={2} 
-                                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" 
-                                    />
-                                </svg>
-                            </div>
-                            <h2 className="text-2xl font-bold text-[#0d1c31] mb-4">
-                                Belum Ada Data Insights
-                            </h2>
-                            <p className="text-gray-600 mb-6">
-                                Belum ada data aktivitas belajar untuk menampilkan insights. 
-                                Mulai belajar untuk melihat analisis kebiasaan belajarmu!
-                            </p>
-                            <button
-                                onClick={onGoBack}
-                                className="bg-[#1a3a5a] text-white px-6 py-3 rounded-lg hover:bg-[#254C75] transition font-semibold"
-                            >
-                                Kembali ke Dashboard
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
-    }
     
     // Merge with userData prop if provided (for backward compatibility)
     // PENTING: consistency_score dan learningPattern HARUS dari model ML (backend)

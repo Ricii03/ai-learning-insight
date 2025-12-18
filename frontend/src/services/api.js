@@ -56,6 +56,12 @@ export const authAPI = {
     return response.data;
   },
 
+  // Register
+  register: async (userData) => {
+    const response = await api.post('/api/auth/register', userData);
+    return response.data;
+  },
+
   // Get current user
   getMe: async () => {
     const response = await api.get('/api/auth/me');

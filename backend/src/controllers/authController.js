@@ -86,6 +86,73 @@ const login = async (req, res, next) => {
   }
 };
 
+// Register new user
+const register = async (req, res, next) => {
+  try {
+    const { userId, displayName, email, password } = req.body;
+
+    // Validate required fields
+    if (!userId || !displayName || !email || !password) {
+      return res.status(400).json({
+        success: false,
+        error: 'Please provide all required fields: userId, displayName, email, and password'
+      });
+    }
+
+    // Check if user already exists
+    const existingUser = await User.findOne({
+      $or: [
+        { userId },
+        { displayName },
+        { email: email.toLowerCase() }
+      ]
+    });
+
+    if (existingUser) {
+      let field = 'User';
+      if (existingUser.userId === userId) field = 'User ID';
+      else if (existingUser.displayName === displayName) field = 'Display Name';
+      else if (existingUser.email === email.toLowerCase()) field = 'Email';
+      
+      return res.status(400).json({
+        success: false,
+        error: `${field} is already taken`
+      });
+    }
+
+    // Create new user
+    const user = await User.create({
+      userId,
+      displayName,
+      email: email.toLowerCase(),
+      password,
+      isActive: true,
+      role: 'user'
+    });
+
+    // Generate token
+    const token = generateToken(user.userId);
+
+    res.status(201).json({
+      success: true,
+      message: 'Registration successful',
+      data: {
+        user: {
+          id: user._id,
+          userId: user.userId,
+          displayName: user.displayName,
+          email: user.email,
+          role: user.role,
+          createdAt: user.createdAt
+        },
+        token
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 // Get current user
 const getMe = async (req, res, next) => {
   try {
@@ -178,6 +245,7 @@ const getUserById = async (req, res, next) => {
 
 module.exports = {
   login,
+  register,
   getMe,
   getAllUsers,
   getUserById

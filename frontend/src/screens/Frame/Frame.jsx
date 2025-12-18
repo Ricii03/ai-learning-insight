@@ -337,7 +337,7 @@ const Button = ({ className = "", children, onClick, variant = 'primary' }) => {
 //   - insight: description dari backend insights API (calculated based on score)
 //   - insightText: insights text dari backend insights API (insightsData.insights)
 //   - onShowDetail: handler untuk membuka modal detail
-const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!', onShowDetail }) => {
+const ConsistencyScoreSection = ({ score = 0, level = 'HIGH', insight = 'Data konsistensi belum tersedia.', insightText = 'Ayo tingkatkan konsistensi belajarmu!', onShowDetail }) => {
     // score berasal dari backend: insightsData.consistencyScore
     // Pastikan score adalah number dan dalam range 0-100
     const numericScore = typeof score === 'number' ? score : parseFloat(score || 0);
@@ -354,8 +354,7 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
     
     console.log('[ConsistencyScoreSection] Received score from backend:', score);
     console.log('[ConsistencyScoreSection] Normalized score:', normalizedScore);
-    console.log('[ConsistencyScoreSection] Display score:', displayScore);
-    console.log('[ConsistencyScoreSection] Calculated angle:', angle); 
+    console.log('[ConsistencyScoreSection] Consistency level:', level);
     
     return (
         <section className="w-full py-4 lg:py-8">
@@ -410,11 +409,6 @@ const ConsistencyScoreSection = ({ score = 0, insight = 'Data konsistensi belum 
 
                             <Button 
                                 onClick={() => {
-                                    // Determine consistency level
-                                    let level = 'HIGH';
-                                    if (normalizedScore < 40) level = 'LOW';
-                                    else if (normalizedScore < 60) level = 'MEDIUM';
-                                    
                                     onShowDetail?.({
                                         consistencyLevel: level,
                                         description: insight,
@@ -735,6 +729,8 @@ const transformInsightsData = (insightsData, user) => {
         return null;
     }
 
+    const jsonInsight = insightsData.jsonInsight;
+
     // Map mostActiveTime to time distribution
     const timeMap = {
         'morning': { label: 'Morning (06:00-11:59)', index: 0 },
@@ -743,12 +739,15 @@ const transformInsightsData = (insightsData, user) => {
         'night': { label: 'Night (00:00-05:59)', index: 3 }
     };
 
-    // Use data from ML model backend (not from user dataset)
-    // Data consistencyScore dan learningPattern HARUS dari model ML
-    const mostActiveTime = insightsData.mostActiveTime || 'morning';
+    // 1. Most Active Time - Prioritize JSON
+    let mostActiveTime = (insightsData.mostActiveTime || 'morning').toLowerCase();
+    if (jsonInsight && jsonInsight.most_active_time) {
+        mostActiveTime = jsonInsight.most_active_time.period.toLowerCase();
+    }
     
-    // consistencyScore dari model ML (backend)
-    // JANGAN gunakan fallback ke user dataset - data harus dari ML model
+    const timeInfo = timeMap[mostActiveTime] || timeMap['morning'];
+
+    // 2. Consistency Score - Prioritize matching JSON Category
     let consistencyScore = 0;
     if (insightsData.consistencyScore !== undefined && insightsData.consistencyScore !== null) {
         const parsedScore = Number(insightsData.consistencyScore);
@@ -756,13 +755,21 @@ const transformInsightsData = (insightsData, user) => {
             consistencyScore = parsedScore;
         }
     }
+
+    if (jsonInsight && jsonInsight.consistency) {
+        console.log(`[transformInsightsData] Using dynamic ML score: ${consistencyScore} for category: ${jsonInsight.consistency.category}`);
+    }
     
-    console.log('[transformInsightsData] Using ML model data from backend:');
-    console.log('[transformInsightsData] - consistencyScore (from ML):', consistencyScore);
-    console.log('[transformInsightsData] - learningPattern (from ML):', insightsData.learningPattern);
-    console.log('[transformInsightsData] - mostActiveTime (from ML):', mostActiveTime);
-    
-    const timeInfo = timeMap[mostActiveTime] || timeMap['morning'];
+    // 3. Learning Pattern - Prioritize JSON
+    let learningPattern = insightsData.learningPattern || 'Reflective Learner';
+    if (jsonInsight && jsonInsight.learning_pattern) {
+        learningPattern = jsonInsight.learning_pattern.name;
+    }
+
+    console.log('[transformInsightsData] Data Source:', jsonInsight ? 'user_insights.json' : 'ML Model');
+    console.log('[transformInsightsData] - consistencyScore:', consistencyScore);
+    console.log('[transformInsightsData] - learningPattern:', learningPattern);
+    console.log('[transformInsightsData] - mostActiveTime:', mostActiveTime);
     
     // Learner type mapping
     const learnerTypeMap = {
@@ -773,13 +780,13 @@ const transformInsightsData = (insightsData, user) => {
         'late_night': 'Late Night Warrior'
     };
     
-    // Description mapping
+    // Description mapping (defaults)
     const descriptionMap = {
-        'morning': 'Kamu adalah Morning Learner! Waktu pagi adalah waktu emasmu untuk belajar. Otakmu paling fresh dan siap menerima informasi baru di pagi hari. Manfaatkan waktu ini untuk materi yang paling menantang!',
-        'afternoon': 'Kamu adalah Afternoon Learner! Waktu siang adalah waktu terbaikmu untuk belajar. Setelah aktivitas pagi, otakmu sudah siap untuk fokus dan menyerap informasi. Gunakan waktu ini untuk mengkonsolidasi pengetahuanmu!',
-        'evening': 'Kamu adalah Evening Learner! Waktu malam adalah waktu produktifmu. Setelah seharian beraktivitas, kamu bisa fokus dan berkonsentrasi dengan baik di malam hari. Manfaatkan waktu ini untuk review dan pemahaman mendalam!',
-        'night': 'Kamu adalah Night Learner! Waktu malam hingga dini hari adalah waktu terbaikmu. Kamu bisa fokus dengan baik di malam hari dan menyerap informasi dengan efektif. Gunakan waktu ini untuk belajar intensif!',
-        'late_night': 'Kamu adalah Late Night Warrior! Waktu larut malam adalah waktu emasmu untuk belajar. Kamu bisa fokus dengan baik di malam hari dan menyerap informasi dengan efektif. Manfaatkan waktu ini untuk belajar intensif!'
+        'morning': 'Kamu adalah Morning Learner! Waktu pagi adalah waktu emasmu untuk belajar.',
+        'afternoon': 'Kamu adalah Afternoon Learner! Waktu siang adalah waktu terbaikmu untuk belajar.',
+        'evening': 'Kamu adalah Evening Learner! Waktu malam adalah waktu produktifmu.',
+        'night': 'Kamu adalah Night Learner! Waktu malam hingga dini hari adalah waktu terbaikmu.',
+        'late_night': 'Kamu adalah Late Night Warrior! Waktu larut malam adalah waktu emasmu.'
     };
     
     // Create time distribution data
@@ -790,31 +797,42 @@ const transformInsightsData = (insightsData, user) => {
         { label: 'Night (00:00-05:59)', fillPercentage: 0, color: 'bg-indigo-700', description: descriptionMap['night'], learnerType: learnerTypeMap['night'] }
     ];
     
+    // Gunakan deskripsi dan learner type dari JSON jika tersedia
+    let activeTimeDesc = descriptionMap[mostActiveTime] || descriptionMap['morning'];
+    let activeLearnerType = learnerTypeMap[mostActiveTime] || learnerTypeMap['morning'];
+    
+    if (insightsData.jsonInsight && insightsData.jsonInsight.most_active_time) {
+        const jsonPeriod = insightsData.jsonInsight.most_active_time.period.toLowerCase();
+        if (jsonPeriod === mostActiveTime.toLowerCase()) {
+            activeTimeDesc = insightsData.jsonInsight.most_active_time.description;
+            activeLearnerType = insightsData.jsonInsight.most_active_time.period_name;
+            console.log('[transformInsightsData] Using most active time description from user_insights.json');
+        }
+    }
+    
     // Set active time to 80%, distribute remaining to others
     timeData[timeInfo.index].fillPercentage = 80;
-    const remaining = 20;
-    const otherCount = 3;
-    const otherPercentage = Math.floor(remaining / otherCount);
-    
-    timeData.forEach((time, index) => {
-        if (index !== timeInfo.index) {
-            time.fillPercentage = otherPercentage;
-        }
-    });
+    timeData[timeInfo.index].description = activeTimeDesc;
+    timeData[timeInfo.index].learnerType = activeLearnerType;
 
     // If insights data exists, use it (timeData already created above)
 
-    // Learning Pattern dari model ML (backend)
-    // Data HARUS dari model ML, bukan dari user dataset
+    // Learning Pattern Details
     const patternMap = {
-        'Consistent Learner': { color: '#44dcd0', description: 'Kamu tipe belajar yang slow but steady! Konsisten dan teratur dalam belajar.' },
-        'Fast Learner': { color: '#0c9bab', description: 'Kamu cepat menyerap materi! Belajar dengan intensitas tinggi dalam waktu singkat.' },
-        'Reflective Learner': { color: '#0d1c31', description: 'Kamu suka merenung dan memahami secara mendalam sebelum melanjutkan.' }
+        'Consistent Learner': { color: '#44dcd0', description: 'Kamu tipe belajar yang slow but steady!' },
+        'Fast Learner': { color: '#0c9bab', description: 'Kamu cepat menyerap materi!' },
+        'Reflective Learner': { color: '#0d1c31', description: 'Kamu suka merenung dan memahami secara mendalam.' }
     };
 
-    // Gunakan learningPattern langsung dari backend ML model
-    const learningPattern = insightsData.learningPattern || 'Reflective Learner';
-    const patternInfo = patternMap[learningPattern] || patternMap['Reflective Learner'];
+    let patternDescription = patternMap[learningPattern]?.description || patternMap['Reflective Learner'].description;
+    if (jsonInsight && jsonInsight.learning_pattern) {
+        patternDescription = jsonInsight.learning_pattern.description;
+    }
+
+    const patternInfo = {
+        ...(patternMap[learningPattern] || patternMap['Reflective Learner']),
+        description: patternDescription
+    };
 
     // Create learning pattern data untuk pie chart
     // Pastikan tidak ada duplikasi pattern
@@ -827,45 +845,54 @@ const transformInsightsData = (insightsData, user) => {
         { label: otherPatterns[1], percentage: 15, color: patternMap[otherPatterns[1]].color }
     ];
 
-    // Consistency description based on score
-    // Use consistencyScore yang sudah dihitung sebelumnya (line 417-419)
+    // Consistency details
     let consistencyDesc = 'Ayo tingkatkan konsistensi belajarmu!';
-    const score = consistencyScore; // Gunakan consistencyScore yang sudah dihitung
-    if (score >= 80) {
-        consistencyDesc = 'Konsistensi kamu kelas expert! Disiplin banget sampai belajar udah kayak bagian dari rutinitas harian kamu.';
-    } else if (score >= 60) {
-        consistencyDesc = 'Konsistensi kamu sudah baik! Pertahankan momentum ini dan coba tingkatkan lagi.';
-    } else if (score >= 40) {
-        consistencyDesc = 'Konsistensi kamu sedang berkembang. Coba buat jadwal belajar yang lebih teratur.';
-    } else {
-        consistencyDesc = 'Ayo tingkatkan konsistensi belajarmu! Mulai dengan belajar sedikit tapi rutin setiap hari.';
+    let consistencyLevel = 'HIGH';
+    if (consistencyScore >= 80) consistencyLevel = 'HIGH';
+    else if (consistencyScore >= 40) consistencyLevel = 'MEDIUM';
+    else consistencyLevel = 'LOW';
+
+    if (jsonInsight && jsonInsight.consistency) {
+        // Ambil deskripsi persis dari user_insights.json
+        consistencyDesc = jsonInsight.consistency.description;
+        
+        // Pastikan level sesuai dengan kategori di JSON
+        const category = jsonInsight.consistency.category;
+        if (category.includes('High')) consistencyLevel = 'HIGH';
+        else if (category.includes('Medium')) consistencyLevel = 'MEDIUM';
+        else if (category.includes('Low')) consistencyLevel = 'LOW';
+        
+        console.log('[transformInsightsData] Using consistency data from user_insights.json');
+    }
+
+    // Generate insight summary text based on JSON if available
+    let insightSummaryText = insightsData.insights || 'Belum ada insight tersedia.';
+    if (jsonInsight) {
+        insightSummaryText = `Berdasarkan data kamu, kamu memiliki ${jsonInsight.consistency.category}. Konsistensi skor kamu adalah ${consistencyScore.toFixed(1)}%.`;
     }
 
     return {
         display_name: user?.displayName ? 
             user.displayName.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()).join(' ') 
-            : 'Pengguna',
-        // consistency_score dari model ML (backend)
+            : (jsonInsight?.display_name || 'Pengguna'),
         consistency_score: consistencyScore,
-        // insights text dari model ML (backend)
-        insight_text: insightsData.insights || 'Belum ada insight tersedia.',
+        insight_text: insightSummaryText,
         most_active_time: {
             data: timeData,
-            description: `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}. Kamu memiliki tingkat aktivitas 80% di waktu ini. Manfaatkan waktu ini untuk materi yang paling menantang!`,
+            description: `Waktu belajarmu yang paling produktif adalah ${timeInfo.label.split('(')[0].trim()}.`,
             activeTime: timeInfo.label.split('(')[0].trim(),
             timeRange: timeInfo.label.match(/\(([^)]+)\)/)?.[1] || '06:00-11:59',
-            learnerType: learnerTypeMap[mostActiveTime] || learnerTypeMap['morning'],
-            detailDescription: descriptionMap[mostActiveTime] || descriptionMap['morning']
+            learnerType: activeLearnerType,
+            detailDescription: activeTimeDesc
         },
-        // learning_pattern dari model ML (backend)
         learning_pattern: {
             data: learningPatternData,
             description: patternInfo.description,
-            // Simpan learningPattern asli dari ML untuk referensi
             mlPattern: learningPattern
         },
         consistency: {
-            description: consistencyDesc
+            description: consistencyDesc,
+            level: consistencyLevel
         }
     };
 };
@@ -1169,6 +1196,7 @@ export function Frame({ onGoBack, userData = {} }) {
                             <div className="flex-1">
                                 <ConsistencyScoreSection 
                                     score={finalUserData.consistency_score || 0}
+                                    level={finalUserData.consistency?.level}
                                     insight={finalUserData.consistency?.description}
                                     insightText={finalUserData.insight_text}
                                     onShowDetail={handleShowConsistencyDetail}

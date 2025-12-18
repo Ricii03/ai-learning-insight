@@ -2,6 +2,8 @@ const LearningActivity = require('../models/LearningActivity'); // File name is 
 const Insight = require('../models/insight');
 const User = require('../models/User');
 const { generateInsights } = require('../services/mlService');
+const fs = require('fs');
+const path = require('path');
 
 const getCurrentInsights = async (req, res, next) => {
   try {
@@ -13,7 +15,21 @@ const getCurrentInsights = async (req, res, next) => {
     
     console.log('[insightController] getCurrentInsights called for userId:', req.params.userId);
     console.log('[insightController] Normalized userId:', userId);
-    console.log('[insightController] userId type:', typeof userId);
+
+    // Load user_insights.json for specific descriptions
+    let jsonInsight = null;
+    try {
+      const jsonPath = path.join(__dirname, '../../model_dev/user_insights.json');
+      if (fs.existsSync(jsonPath)) {
+        const jsonData = JSON.parse(fs.readFileSync(jsonPath, 'utf8'));
+        jsonInsight = jsonData.find(item => String(item.user_id) === userId);
+        if (jsonInsight) {
+          console.log('[insightController] Found matching insight in user_insights.json');
+        }
+      }
+    } catch (err) {
+      console.error('[insightController] Error reading user_insights.json:', err);
+    }
 
     // Cari insight terbaru dari collection Insight (coba dengan normalized userId)
     let latestInsight = await Insight.findOne({ userId })
@@ -66,13 +82,18 @@ const getCurrentInsights = async (req, res, next) => {
           ...latestInsight.toObject(),
           consistencyScore: user.consistencyScore,
           mostActiveTime: user.mostActiveTime || latestInsight.mostActiveTime,
-          insights: user.engagementLevel 
-            ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
-            : latestInsight.insights
+          insights: jsonInsight 
+            ? `Berdasarkan data kamu, ${jsonInsight.consistency.category.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+            : (user.engagementLevel 
+                ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+                : latestInsight.insights)
         };
         return res.json({
           success: true,
-          data: insightWithUserData
+          data: {
+            ...insightWithUserData,
+            jsonInsight
+          }
         });
       }
       
@@ -80,7 +101,10 @@ const getCurrentInsights = async (req, res, next) => {
       console.log('[insightController] Returning existing insight from activities');
       return res.json({
         success: true,
-        data: latestInsight
+        data: {
+          ...latestInsight.toObject(),
+          jsonInsight
+        }
       });
     }
 
@@ -100,9 +124,11 @@ const getCurrentInsights = async (req, res, next) => {
           totalActivities: 0,
           completionRate: 0,
           avgScore: 0,
-          insights: user.engagementLevel 
-            ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
-            : 'Belum ada data aktivitas belajar. Mulai belajar untuk melihat insights-mu!'
+          insights: jsonInsight
+            ? `Berdasarkan data kamu, ${jsonInsight.consistency.category.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+            : (user.engagementLevel 
+                ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+                : 'Belum ada data aktivitas belajar. Mulai belajar untuk melihat insights-mu!')
         };
         console.log('[insightController] Using User dataset data:', {
           consistencyScore: result.consistencyScore,
@@ -146,7 +172,10 @@ const getCurrentInsights = async (req, res, next) => {
 
     res.json({
       success: true,
-      data: insight
+      data: {
+        ...insight.toObject(),
+        jsonInsight
+      }
     });
 
   } catch (error) {

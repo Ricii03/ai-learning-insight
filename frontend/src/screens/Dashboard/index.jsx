@@ -1,6 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 // Asumsi Card, CardHeader, dll. diimpor dari path yang benar
 import { Card, CardHeader, CardTitle, CardContent } from '../Frame/Frame';
+import { useAuth } from '../../contexts/AuthContext';
+import { LogOut } from 'lucide-react';
 
 // Helper function to get initials from name
 const getInitials = (name) => {
@@ -13,34 +15,65 @@ const getInitials = (name) => {
 }; 
 
 // 1. KOMPONEN HEADER DITERIMA PROPS
-const Header = ({ userName, initials }) => (
-    <header className="bg-white shadow">
-        <div className="max-w-6xl mx-auto px-4 sm:px-4 lg:px-6 py-4 flex justify-between items-center">
-            <div className="flex items-center space-x-6">
-                <img 
-                    src="/dicoding.png" 
-                    alt="dicoding logo" 
-                    className="h-10 w-auto"
-                    onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/100x40/FFFFFF/000000?text=LOGO"; }}
-                />
-                <nav className="hidden md:flex space-x-4 text-sm text-gray-600">
-                    <a href="#" className="font-bold text-black">Home</a>
-                    <a href="#">Academy</a>
-                    <a href="#">Challenge</a>
-                    <a href="#">Event</a>
-                    <a href="#">Job</a>
-                </nav>
-            </div>
-            <div className="flex items-center space-x-4">
-                {/* Mengganti inisial hardcoded dengan prop initials */}
-                <div className="w-8 h-8 rounded-full bg-yellow-300 border-2 border-white shadow flex items-center justify-center text-xs font-bold text-gray-700">
-                    {initials || 'U'}
+const Header = ({ userName, initials }) => {
+    const { logout } = useAuth();
+    const [showUserMenu, setShowUserMenu] = useState(false);
+
+    return (
+        <header className="bg-white shadow relative z-50">
+            <div className="max-w-6xl mx-auto px-4 sm:px-4 lg:px-6 py-4 flex justify-between items-center">
+                <div className="flex items-center space-x-6">
+                    <img 
+                        src="/dicoding.png" 
+                        alt="dicoding logo" 
+                        className="h-10 w-auto"
+                        onError={(e) => { e.target.onerror = null; e.target.src = "https://placehold.co/100x40/FFFFFF/000000?text=LOGO"; }}
+                    />
+                    <nav className="hidden md:flex space-x-4 text-sm text-gray-600">
+                        <a href="#" className="font-bold text-black">Home</a>
+                        <a href="#">Academy</a>
+                        <a href="#">Challenge</a>
+                        <a href="#">Event</a>
+                        <a href="#">Job</a>
+                    </nav>
                 </div>
-                <svg className="w-6 h-6 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                <div className="flex items-center space-x-4">
+                    <div className="relative">
+                        <button 
+                            onClick={() => setShowUserMenu(!showUserMenu)}
+                            className="flex items-center space-x-2 focus:outline-none"
+                        >
+                            <div className="w-8 h-8 rounded-full bg-yellow-300 border-2 border-white shadow flex items-center justify-center text-xs font-bold text-gray-700">
+                                {initials || 'U'}
+                            </div>
+                            <svg className={`w-4 h-4 text-gray-500 transition-transform ${showUserMenu ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                            </svg>
+                        </button>
+
+                        {showUserMenu && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 border border-gray-100">
+                                <div className="px-4 py-2 border-b border-gray-100">
+                                    <p className="text-sm font-semibold text-gray-800 truncate">{userName}</p>
+                                </div>
+                                <button
+                                    onClick={logout}
+                                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2 transition-colors"
+                                >
+                                    <LogOut className="w-4 h-4" />
+                                    <span>Logout</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                    <svg className="w-6 h-6 text-gray-500 cursor-pointer hover:text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
+                    </svg>
+                </div>
             </div>
-        </div>
-    </header>
-);
+        </header>
+    );
+};
 
 // 2. KOMPONEN DASHBOARD DITERIMA PROPS (setShowInsight, user)
 const Dashboard = ({ setShowInsight, user }) => {

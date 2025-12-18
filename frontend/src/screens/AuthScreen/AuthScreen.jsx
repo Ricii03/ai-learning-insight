@@ -108,21 +108,65 @@ const LoginForm = ({ onLoginSuccess, onSwitch }) => {
 
 // Formulir Register 
 const RegisterForm = ({ onRegisterSuccess, onSwitch }) => {
+    const { register } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
-    const handleSubmit = (e) => {
+    const validatePassword = (pass) => {
+        const hasUpperCase = /[A-Z]/.test(pass);
+        const hasNumber = /[0-9]/.test(pass);
+        const isLongEnough = pass.length >= 8;
+        return hasUpperCase && hasNumber && isLongEnough;
+    };
+
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        console.log('Register attempt:', { name, email, password });
-        
-        setTimeout(() => {
-            onRegisterSuccess(); 
-        }, 1000);
+        setError('');
+
+        // Validasi format email sederhana
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            setError('Format email tidak valid');
+            return;
+        }
+
+        // Validasi password (1 Caps, 1 Angka, min 8)
+        if (!validatePassword(password)) {
+            setError('Password minimal 8 karakter, harus mengandung huruf kapital dan angka.');
+            return;
+        }
+
+        setLoading(true);
+
+        try {
+            // Generate User ID acak numerik (format: 7-8 digit sesuai json)
+            const generatedUserId = Math.floor(1000000 + Math.random() * 9000000).toString();
+
+            const result = await register({
+                userId: generatedUserId,
+                displayName: name,
+                email,
+                password
+            });
+
+            if (result.success) {
+                onRegisterSuccess();
+            } else {
+                setError(result.error || 'Pendaftaran gagal. Silakan coba lagi.');
+            }
+        } catch (err) {
+            setError('Terjadi kesalahan saat pendaftaran. Silakan coba lagi.');
+            console.error('Registration error:', err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-4">
             <InputField
                 id="register-name"
                 label="Nama Lengkap"
@@ -137,7 +181,7 @@ const RegisterForm = ({ onRegisterSuccess, onSwitch }) => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="email aktif Anda"
+                placeholder="email@contoh.com"
             />
             <InputField
                 id="register-password"
@@ -145,15 +189,31 @@ const RegisterForm = ({ onRegisterSuccess, onSwitch }) => {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="buat password minimal 6 karakter"
+                placeholder="min 8 karakter, huruf kapital & angka"
             />
+
+            {error && (
+                <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                    {error}
+                </div>
+            )}
 
             <button
                 type="submit"
-                className={`w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[${PRIMARY_COLOR}] hover:bg-[${HOVER_COLOR}] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[${PRIMARY_COLOR}] transition duration-150`}
+                disabled={loading}
+                className={`w-full flex items-center justify-center py-2 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-[${PRIMARY_COLOR}] hover:bg-[${HOVER_COLOR}] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[${PRIMARY_COLOR}] transition duration-150 ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-                <UserPlus className="w-4 h-4 mr-2" />
-                Daftar Sekarang
+                {loading ? (
+                    <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Memproses...
+                    </>
+                ) : (
+                    <>
+                        <UserPlus className="w-4 h-4 mr-2" />
+                        Daftar Sekarang
+                    </>
+                )}
             </button>
             
             <p className="text-center text-sm text-gray-600">
@@ -161,7 +221,7 @@ const RegisterForm = ({ onRegisterSuccess, onSwitch }) => {
                 <a 
                     href="#" 
                     onClick={() => onSwitch('login')} 
-                    className={`font-medium text-[${PRIMARY_COLOR}] hover:text-[${HOVER_COLOR}]`}
+                    className="font-medium text-blue-600 hover:text-blue-500"
                 >
                     Masuk
                 </a>
@@ -180,10 +240,9 @@ const AuthScreen = () => {
         // No need to do anything here as the App will re-render
     };
 
-    // Register functionality - for now just show alert
-    // TODO: Implement register API endpoint
+    // Register functionality
     const handleRegisterSuccess = () => {
-        alert('Fitur pendaftaran belum tersedia. Silakan hubungi administrator untuk membuat akun.');
+        // Success is handled by AuthContext
     };
 
     return (

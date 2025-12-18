@@ -67,45 +67,53 @@ const getCurrentInsights = async (req, res, next) => {
     console.log('[insightController] Activities found:', activities.length);
 
     if (latestInsight) {
-      // Prioritaskan data dari User dataset jika:
-      // 1. Tidak ada activities, ATAU
-      // 2. User punya consistencyScore di dataset yang lebih tinggi dari Insight
-      const shouldUseDataset = (activities.length === 0 || 
-        (user && user.consistencyScore !== undefined && 
-         user.consistencyScore > latestInsight.consistencyScore));
+      // Check if we need to regenerate (e.g., if activity count has changed)
+      const activityCountChanged = activities.length !== latestInsight.totalActivities;
       
-      if (shouldUseDataset && user && user.consistencyScore !== undefined && user.consistencyScore > 0) {
-        console.log('[insightController] Using User dataset data instead of Insight');
-        console.log('[insightController] Dataset consistencyScore:', user.consistencyScore);
-        console.log('[insightController] Insight consistencyScore:', latestInsight.consistencyScore);
-        const insightWithUserData = {
-          ...latestInsight.toObject(),
-          consistencyScore: user.consistencyScore,
-          mostActiveTime: user.mostActiveTime || latestInsight.mostActiveTime,
-          insights: jsonInsight 
-            ? `Berdasarkan data kamu, ${jsonInsight.consistency.category.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
-            : (user.engagementLevel 
-                ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
-                : latestInsight.insights)
-        };
+      if (activityCountChanged) {
+        console.log(`[insightController] Activity count changed (${latestInsight.totalActivities} -> ${activities.length}). Regenerating...`);
+        // Let it fall through to generation logic below by NOT returning here
+      } else {
+        // Prioritaskan data dari User dataset jika:
+        // 1. Tidak ada activities, ATAU
+        // 2. User punya consistencyScore di dataset yang lebih tinggi dari Insight
+        const shouldUseDataset = (activities.length === 0 || 
+          (user && user.consistencyScore !== undefined && 
+           user.consistencyScore > latestInsight.consistencyScore));
+        
+        if (shouldUseDataset && user && user.consistencyScore !== undefined && user.consistencyScore > 0) {
+          console.log('[insightController] Using User dataset data instead of Insight');
+          console.log('[insightController] Dataset consistencyScore:', user.consistencyScore);
+          console.log('[insightController] Insight consistencyScore:', latestInsight.consistencyScore);
+          const insightWithUserData = {
+            ...latestInsight.toObject(),
+            consistencyScore: user.consistencyScore,
+            mostActiveTime: user.mostActiveTime || latestInsight.mostActiveTime,
+            insights: jsonInsight 
+              ? `Berdasarkan data kamu, ${jsonInsight.consistency.category.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+              : (user.engagementLevel 
+                  ? `Berdasarkan data kamu, ${user.engagementLevel.toLowerCase()}. Konsistensi skor kamu adalah ${user.consistencyScore.toFixed(1)}%.`
+                  : latestInsight.insights)
+          };
+          return res.json({
+            success: true,
+            data: {
+              ...insightWithUserData,
+              jsonInsight
+            }
+          });
+        }
+        
+        // Jika ada activities dan dataset tidak lebih tinggi, return Insight yang sudah ada (dari activities)
+        console.log('[insightController] Returning existing insight from activities');
         return res.json({
           success: true,
           data: {
-            ...insightWithUserData,
+            ...latestInsight.toObject(),
             jsonInsight
           }
         });
       }
-      
-      // Jika ada activities dan dataset tidak lebih tinggi, return Insight yang sudah ada (dari activities)
-      console.log('[insightController] Returning existing insight from activities');
-      return res.json({
-        success: true,
-        data: {
-          ...latestInsight.toObject(),
-          jsonInsight
-        }
-      });
     }
 
     // Activities sudah di-check di atas
@@ -160,15 +168,34 @@ const getCurrentInsights = async (req, res, next) => {
     }
 
     // Simpan insight ke database (termasuk default)
-    console.log('[insightController] Creating insight in database');
-    const insight = await Insight.create({
-      userId,
-      weekStart: new Date(),
-      weekEnd: new Date(),
-      ...result
-    });
+    console.log('[insightController] Updating/Creating insight in database');
+    
+    // Gunakan findOneAndUpdate dengan upsert agar data terupdate jika sudah ada insight untuk hari ini
+    // atau membuat baru jika belum ada. Ini memastikan koleksi Insight selalu sinkron.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
 
-    console.log('[insightController] Insight created successfully, ID:', insight._id);
+    const insight = await Insight.findOneAndUpdate(
+      { 
+        userId, 
+        createdAt: { $gte: today, $lt: tomorrow } 
+      },
+      { 
+        userId,
+        weekStart: new Date(),
+        weekEnd: new Date(),
+        ...result
+      },
+      { 
+        new: true, 
+        upsert: true,
+        setDefaultsOnInsert: true 
+      }
+    );
+
+    console.log('[insightController] Insight processed successfully, ID:', insight._id);
 
     res.json({
       success: true,

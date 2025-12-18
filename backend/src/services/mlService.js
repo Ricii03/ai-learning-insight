@@ -2,7 +2,7 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-const pythonPath = path.join(__dirname, '../../../.venv/Scripts/python.exe');
+const pythonPath = process.env.PYTHON_PATH || path.join(__dirname, '../../../.venv/Scripts/python.exe');
 const scriptPath = path.join(__dirname, '../../model_dev/predict.py');
 
 console.log('[mlService] Python path:', pythonPath);

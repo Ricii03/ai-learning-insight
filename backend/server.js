@@ -98,8 +98,12 @@ app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => {
-  console.log('='.repeat(50));
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log('='.repeat(50));
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.listen(PORT, () => {
+    console.log('='.repeat(50));
+    console.log(`Server running on http://localhost:${PORT}`);
+    console.log('='.repeat(50));
+  });
+}
+
+module.exports = app;
